@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.TaskService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/tasks")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Task Control", description = "Generic task control APIs for admin")
 @SecurityRequirement(name = "Bearer Authentication")
 @PreAuthorize("hasRole('ADMIN')")
@@ -28,7 +30,9 @@ public class TaskControlController {
             @PathVariable String taskId,
             @RequestParam String userId
     ) {
+        log.info(">>> Admin assigning task {} to user {}", taskId, userId);
         taskService.setAssignee(taskId, userId);
+        log.info(">>> Task assigned successfully");
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "Task assigned successfully");
@@ -56,11 +60,13 @@ public class TaskControlController {
             @PathVariable String taskId,
             @RequestBody(required = false) Map<String, Object> variables
     ) {
+        log.info(">>> Admin completing task {} with variables: {}", taskId, variables);
         if (variables != null && !variables.isEmpty()) {
             taskService.complete(taskId, variables);
         } else {
             taskService.complete(taskId);
         }
+        log.info(">>> Task completed successfully");
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "Task completed successfully");

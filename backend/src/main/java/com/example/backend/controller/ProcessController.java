@@ -1,8 +1,10 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.ProcessInstanceDto;
+import com.example.backend.dto.ProcessStartResponse;
 import com.example.backend.dto.TaskDto;
 import com.example.backend.service.FlowableProcessService;
+import com.example.backend.service.ProcessManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -10,73 +12,90 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Controller for Flowable Process operations (maker-checker workflow).
  * Provides comprehensive process management APIs with verbose DTOs.
+ * 
+ * NOTE: This controller uses ProcessManagementService for consistent sheetId generation and logging.
  */
 @RestController
 @RequestMapping("/api/process")
+@Slf4j
 @Tag(name = "Process Management", description = "APIs for managing Flowable process instances and maker-checker workflows")
 public class ProcessController {
 
     @Autowired
     private FlowableProcessService processService;
+    
+    @Autowired
+    private ProcessManagementService processManagementService;
 
     /**
      * Start a new retention offer process.
-     * @return ProcessInstanceDto with process details
+     * @return ProcessStartResponse with process details including generated sheetId
      */
     @Operation(
         summary = "Start Retention Offer Process",
-        description = "Initiates a new retention offer maker-checker workflow process"
+        description = "Initiates a new retention offer maker-checker workflow process with automatic sheetId generation"
     )
     @ApiResponses(value = {
         @ApiResponse(
             responseCode = "200", 
             description = "Process started successfully",
-            content = @Content(schema = @Schema(implementation = ProcessInstanceDto.class))
+            content = @Content(schema = @Schema(implementation = ProcessStartResponse.class))
         ),
         @ApiResponse(responseCode = "400", description = "Invalid process configuration"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/start")
-    public ProcessInstanceDto startProcess() {
-        return processService.startProcess("retentionOfferProcess");
+    public ProcessStartResponse startProcess(Principal principal) {
+        log.info(">>> Starting retention offer process");
+        String initiator = principal != null ? principal.getName() : "system";
+        ProcessStartResponse response = processManagementService.startProcess("retentionOfferProcess", null, initiator);
+        log.info(">>> Retention offer process started: {}", response.getProcessInstanceId());
+        return response;
     }
 
     /**
      * Start a process with variables.
      * @param processKey process definition key
      * @param variables initial process variables
-     * @return ProcessInstanceDto with process details
+     * @return ProcessStartResponse with process details including generated sheetId
      */
     @Operation(
         summary = "Start Process with Variables",
-        description = "Initiates a new process instance with custom variables and process definition key"
+        description = "Initiates a new process instance with custom variables and automatic sheetId generation"
     )
     @ApiResponses(value = {
         @ApiResponse(
             responseCode = "200", 
             description = "Process started successfully with variables",
-            content = @Content(schema = @Schema(implementation = ProcessInstanceDto.class))
+            content = @Content(schema = @Schema(implementation = ProcessStartResponse.class))
         ),
         @ApiResponse(responseCode = "400", description = "Invalid process key or variables"),
         @ApiResponse(responseCode = "404", description = "Process definition not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/start/{processKey}")
-    public ProcessInstanceDto startProcessWithVariables(
+    public ProcessStartResponse startProcessWithVariables(
             @Parameter(description = "Process definition key", required = true, example = "retentionOfferProcess")
             @PathVariable String processKey, 
             @Parameter(description = "Initial process variables", required = true)
-            @RequestBody Map<String, Object> variables) {
-        return processService.startProcess(processKey, variables);
+            @RequestBody Map<String, Object> variables,
+            Principal principal) {
+        log.info(">>> Starting process: {} with variables", processKey);
+        String initiator = principal != null ? principal.getName() : "system";
+        ProcessStartResponse response = processManagementService.startProcess(processKey, variables, initiator);
+        log.info(">>> Process started: {}", response.getProcessInstanceId());
+        return response;
     }
 
     /**

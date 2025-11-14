@@ -1,11 +1,14 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.ProcessInstanceDto;
+import com.example.backend.dto.ProcessStartResponse;
 import com.example.backend.dto.TaskDto;
+import com.example.backend.service.ProcessManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
@@ -16,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +28,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/process")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Process Control", description = "Generic process control APIs for admin")
 @SecurityRequirement(name = "Bearer Authentication")
 @PreAuthorize("hasRole('ADMIN')")
@@ -32,14 +37,19 @@ public class ProcessControlController {
     private final RuntimeService runtimeService;
     private final RepositoryService repositoryService;
     private final TaskService taskService;
+    private final ProcessManagementService processManagementService;
     
     @PostMapping("/start/{processKey}")
     @Operation(summary = "Start process by key", description = "Start a new process instance from any deployed definition")
-    public ResponseEntity<Map<String, Object>> startProcess(
+    public ResponseEntity<ProcessStartResponse> startProcess(
             @PathVariable String processKey,
-            @RequestBody(required = false) Map<String, Object> payload
+            @RequestBody(required = false) Map<String, Object> payload,
+            Principal principal
     ) {
-        String businessKey = payload != null ? (String) payload.get("businessKey") : null;
+        log.info(">>> Admin starting process: {}", processKey);
+        log.info(">>> Admin user: {}", principal != null ? principal.getName() : "unknown");
+        log.info(">>> Payload: {}", payload);
+        
         @SuppressWarnings("unchecked")
         Map<String, Object> variables = payload != null ? (Map<String, Object>) payload.get("variables") : new HashMap<>();
         
@@ -47,17 +57,17 @@ public class ProcessControlController {
             variables = new HashMap<>();
         }
         
-        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
-                processKey,
-                businessKey,
-                variables
-        );
+        // If businessKey is in payload root, add it to variables for consistency
+        if (payload != null && payload.containsKey("businessKey")) {
+            variables.put("businessKey", payload.get("businessKey"));
+        }
         
-        Map<String, Object> response = new HashMap<>();
-        response.put("processInstanceId", processInstance.getId());
-        response.put("processDefinitionId", processInstance.getProcessDefinitionId());
-        response.put("businessKey", processInstance.getBusinessKey());
-        response.put("message", "Process started successfully");
+        String initiator = principal != null ? principal.getName() : "admin";
+        
+        // Use the service layer which handles sheetId generation, logging, etc.
+        ProcessStartResponse response = processManagementService.startProcess(processKey, variables, initiator);
+        
+        log.info(">>> Process started successfully: {}", response.getProcessInstanceId());
         
         return ResponseEntity.ok(response);
     }

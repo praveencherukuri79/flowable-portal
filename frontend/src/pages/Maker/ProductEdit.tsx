@@ -48,11 +48,15 @@ export function ProductEdit() {
   const [effectiveDate, setEffectiveDate] = useState(dayjs().format('YYYY-MM-DD'))
   const [comments, setComments] = useState('')
 
+  // Check access - must come from formKey navigation
   useEffect(() => {
-    if (taskId && processInstanceId) {
-      loadTaskVariables()
+    if (!taskId || !processInstanceId) {
+      setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to My Tasks and claim a task first.')
+      setTimeout(() => navigate('/maker'), 3000)
+      return
     }
-  }, [taskId, processInstanceId])
+    loadTaskVariables()
+  }, [taskId, processInstanceId, navigate])
 
   useEffect(() => {
     if (sheetId) {
@@ -64,7 +68,16 @@ export function ProductEdit() {
     try {
       setLoading(true)
       const response = await flowableApi.getTaskVariables(taskId)
+      console.log('Maker - Task variables:', response)
+      
       const sid = response.sheetId as string
+      console.log('Maker - Extracted sheetId:', sid)
+      
+      if (!sid) {
+        setError('Sheet ID not found. Please contact administrator.')
+        return
+      }
+      
       setSheetId(sid)
       
       // Check if this is a rejected task coming back
@@ -73,7 +86,7 @@ export function ProductEdit() {
       }
     } catch (err) {
       setError('Failed to load task details')
-      console.error('Error:', err)
+      console.error('Error loading task variables:', err)
     } finally {
       setLoading(false)
     }
@@ -153,20 +166,33 @@ export function ProductEdit() {
       setError('Please add at least one product before submitting')
       return
     }
+    
+    if (!sheetId) {
+      setError('Sheet ID is missing. Cannot submit.')
+      return
+    }
+
+    console.log('Completing task with:', {
+      taskId,
+      sheetId,
+      productsCount: products.length,
+      products
+    })
 
     try {
       setLoading(true)
+      // Note: sheetId is already in process variables, but we pass it again for clarity
+      // The TaskListener will read it from the execution context
       await flowableApi.completeTask(taskId, {
         products: products,
-        sheetId,
         makerComments: makerResponse || 'Products submitted for approval',
-        stage1Decision: 'COMPLETE',
         submittedAt: new Date().toISOString()
       })
       setSuccessMessage('Products submitted successfully!')
       setTimeout(() => navigate('/maker'), 2000)
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to complete task')
+      console.error('Error completing task:', err)
     } finally {
       setLoading(false)
     }
@@ -174,9 +200,15 @@ export function ProductEdit() {
 
   if (!taskId || !processInstanceId) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="warning">
-          This page can only be accessed via a claimed task. Please go to "My Tasks" and claim a task.
+      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>❌ Unauthorized Access</Typography>
+          <Typography>
+            This page can only be accessed from a claimed task. Please go to <strong>My Tasks</strong> and claim a task first.
+          </Typography>
+          <Typography sx={{ mt: 2, fontStyle: 'italic', fontSize: '0.9rem' }}>
+            Redirecting to Maker Portal in 3 seconds...
+          </Typography>
         </Alert>
       </Box>
     )

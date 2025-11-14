@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/flowable/runtime")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Flowable Runtime", description = "Generic Flowable runtime APIs for process management")
 @SecurityRequirement(name = "Bearer Authentication")
 public class FlowableRuntimeController {
@@ -35,8 +37,14 @@ public class FlowableRuntimeController {
             @RequestBody(required = false) Map<String, Object> payload,
             Principal principal
     ) {
+        log.info(">>> Received start process request for: {}", processKey);
+        log.info(">>> User: {}", principal != null ? principal.getName() : "anonymous");
+        log.info(">>> Payload: {}", payload);
+        
         String initiator = principal != null ? principal.getName() : null;
         ProcessStartResponse response = processManagementService.startProcess(processKey, payload, initiator);
+        
+        log.info(">>> Returning response: {}", response);
         return ResponseEntity.ok(response);
     }
 

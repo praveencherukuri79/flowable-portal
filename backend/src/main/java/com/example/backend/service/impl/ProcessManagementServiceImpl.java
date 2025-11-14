@@ -30,7 +30,10 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
     @Override
     @CacheEvict(value = "processInstances", allEntries = true)
     public ProcessStartResponse startProcess(String processKey, Map<String, Object> variables, String initiator) {
-        log.info("Starting process: {} for initiator: {}", processKey, initiator);
+        log.info("=== PROCESS START REQUEST ===");
+        log.info("Process Key: {}", processKey);
+        log.info("Initiator: {}", initiator);
+        log.info("Input Variables: {}", variables);
 
         // Enrich variables
         Map<String, Object> enrichedVariables = variables != null ? new HashMap<>(variables) : new HashMap<>();
@@ -38,22 +41,33 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
         // Add initiator
         if (initiator != null) {
             enrichedVariables = ProcessVariableUtils.enrichWithInitiator(enrichedVariables, initiator);
+            log.info("Added initiator variables");
         }
         
         // Ensure sheetId
         enrichedVariables = ProcessVariableUtils.ensureSheetId(enrichedVariables);
+        String generatedSheetId = (String) enrichedVariables.get("sheetId");
+        log.info("Generated/Retrieved sheetId: {}", generatedSheetId);
         
         // Extract business key
         String businessKey = ProcessVariableUtils.extractBusinessKey(enrichedVariables);
+        log.info("Business Key: {}", businessKey);
+        
+        log.info("Final Variables to be passed: {}", enrichedVariables);
 
         // Start process
+        log.info("Starting process instance...");
         ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
                 processKey,
                 businessKey,
                 enrichedVariables
         );
 
-        log.info("Process started: {} with ID: {}", processKey, processInstance.getId());
+        log.info("✓ Process started successfully!");
+        log.info("  Process Instance ID: {}", processInstance.getId());
+        log.info("  Process Definition ID: {}", processInstance.getProcessDefinitionId());
+        log.info("  Business Key: {}", processInstance.getBusinessKey());
+        log.info("=== PROCESS START COMPLETE ===");
 
         // Build response
         return ProcessStartResponse.builder()

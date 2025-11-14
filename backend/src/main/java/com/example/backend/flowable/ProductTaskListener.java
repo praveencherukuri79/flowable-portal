@@ -29,36 +29,50 @@ public class ProductTaskListener implements TaskListener {
     @Override
     public void notify(DelegateTask delegateTask) {
         try {
-            log.info("ProductTaskListener triggered for task: {}", delegateTask.getName());
+            log.info("=== ProductTaskListener START ===");
+            log.info("Task Name: {}", delegateTask.getName());
+            log.info("Task ID: {}", delegateTask.getId());
+            log.info("Process Instance ID: {}", delegateTask.getProcessInstanceId());
+            log.info("Assignee: {}", delegateTask.getAssignee());
             
             // Get products from task variables
             Object productsObj = delegateTask.getVariable("products");
             String sheetId = (String) delegateTask.getVariable("sheetId");
             String editedBy = delegateTask.getAssignee();
             
+            log.info("Retrieved variables - sheetId: {}, products: {}", 
+                    sheetId, productsObj != null ? "present" : "null");
+            
             if (productsObj != null && sheetId != null) {
                 // Convert products to DTOs
                 List<ProductDto> products;
                 if (productsObj instanceof String) {
+                    log.info("Products is String, parsing JSON");
                     products = objectMapper.readValue((String) productsObj, new TypeReference<List<ProductDto>>(){});
                 } else if (productsObj instanceof List) {
+                    log.info("Products is List, converting");
                     products = objectMapper.convertValue(productsObj, new TypeReference<List<ProductDto>>(){});
                 } else {
                     log.warn("Unknown products type: {}", productsObj.getClass());
                     return;
                 }
                 
+                log.info("Parsed {} products", products.size());
+                
                 // Save products using service (business logic separated)
                 productService.saveProductsFromTask(sheetId, products, editedBy);
                 
-                log.info("Saved {} products for sheet {}", products.size(), sheetId);
+                log.info("✓ Successfully saved {} products for sheet {}", products.size(), sheetId);
             } else {
-                log.warn("Missing required variables: sheetId={}, products={}", 
-                        sheetId, productsObj != null);
+                log.error("✗ Missing required variables - sheetId: {}, products: {}", 
+                        sheetId != null ? sheetId : "NULL", 
+                        productsObj != null ? "present" : "NULL");
             }
             
+            log.info("=== ProductTaskListener END ===");
+            
         } catch (Exception e) {
-            log.error("Error in ProductTaskListener", e);
+            log.error("✗ Error in ProductTaskListener", e);
             throw new RuntimeException("Failed to save products: " + e.getMessage(), e);
         }
     }

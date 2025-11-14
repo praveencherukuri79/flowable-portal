@@ -31,11 +31,15 @@ export function ItemApproval() {
   const [sheetId, setSheetId] = useState<string>('')
   const [comments, setComments] = useState('')
 
+  // Check access - must come from formKey navigation
   useEffect(() => {
-    if (taskId && processInstanceId) {
-      loadTaskVariables()
+    if (!taskId || !processInstanceId) {
+      setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to Pending Approvals and claim a task first.')
+      setTimeout(() => navigate('/checker'), 3000)
+      return
     }
-  }, [taskId, processInstanceId])
+    loadTaskVariables()
+  }, [taskId, processInstanceId, navigate])
 
   useEffect(() => {
     if (sheetId) {
@@ -109,9 +113,15 @@ export function ItemApproval() {
 
   if (!taskId || !processInstanceId) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="warning">
-          This page can only be accessed via a claimed task. Please go to "Pending Approvals" and claim a task.
+      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>❌ Unauthorized Access</Typography>
+          <Typography>
+            This page can only be accessed from a claimed task. Please go to <strong>Pending Approvals</strong> and claim a task first.
+          </Typography>
+          <Typography sx={{ mt: 2, fontStyle: 'italic', fontSize: '0.9rem' }}>
+            Redirecting to Checker Portal in 3 seconds...
+          </Typography>
         </Alert>
       </Box>
     )

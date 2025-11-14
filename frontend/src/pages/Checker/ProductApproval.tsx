@@ -34,11 +34,15 @@ export function ProductApproval() {
   const [makerComments, setMakerComments] = useState<string>('')
   const [rejectionHistory, setRejectionHistory] = useState<string>('')
 
+  // Check access - must come from formKey navigation
   useEffect(() => {
-    if (taskId && processInstanceId) {
-      loadTaskVariables()
+    if (!taskId || !processInstanceId) {
+      setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to Pending Approvals and claim a task first.')
+      setTimeout(() => navigate('/checker'), 3000)
+      return
     }
-  }, [taskId, processInstanceId])
+    loadTaskVariables()
+  }, [taskId, processInstanceId, navigate])
 
   useEffect(() => {
     if (sheetId) {
@@ -50,7 +54,16 @@ export function ProductApproval() {
     try {
       setLoading(true)
       const response = await flowableApi.getTaskVariables(taskId)
+      console.log('Task variables:', response)
+      
       const sid = response.sheetId as string
+      console.log('Extracted sheetId:', sid)
+      
+      if (!sid) {
+        setError('Sheet ID not found in task variables. This task may not have been started correctly.')
+        return
+      }
+      
       setSheetId(sid)
       
       // Load previous rejection comments if any
@@ -62,22 +75,34 @@ export function ProductApproval() {
       if (response.makerComments) {
         setMakerComments(response.makerComments as string)
       }
-    } catch (err) {
-      setError('Failed to load task details')
-      console.error('Error:', err)
+    } catch (err: any) {
+      if (err?.response?.status === 404 || err?.message?.includes("doesn't exist")) {
+        setError('This task no longer exists. It may have been completed or cancelled. Please refresh the task list.')
+        setTimeout(() => navigate('/checker'), 3000)
+      } else {
+        setError('Failed to load task details: ' + (err?.response?.data?.message || err?.message))
+      }
+      console.error('Error loading task variables:', err)
     } finally {
       setLoading(false)
     }
   }
 
   const loadProducts = async () => {
+    if (!sheetId) {
+      console.warn('Cannot load products: sheetId is empty')
+      return
+    }
+    
     try {
       setLoading(true)
+      console.log('Loading products for sheetId:', sheetId)
       const data = await dataQueryApi.getProductsBySheet(sheetId)
+      console.log('Loaded products:', data)
       setProducts(data)
     } catch (err) {
       setError('Failed to load products')
-      console.error('Error:', err)
+      console.error('Error loading products:', err)
     } finally {
       setLoading(false)
     }
@@ -124,9 +149,15 @@ export function ProductApproval() {
 
   if (!taskId || !processInstanceId) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="warning">
-          This page can only be accessed via a claimed task. Please go to "Pending Approvals" and claim a task.
+      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>❌ Unauthorized Access</Typography>
+          <Typography>
+            This page can only be accessed from a claimed task. Please go to <strong>Pending Approvals</strong> and claim a task first.
+          </Typography>
+          <Typography sx={{ mt: 2, fontStyle: 'italic', fontSize: '0.9rem' }}>
+            Redirecting to Checker Portal in 3 seconds...
+          </Typography>
         </Alert>
       </Box>
     )
