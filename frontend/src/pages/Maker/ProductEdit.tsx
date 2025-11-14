@@ -38,6 +38,8 @@ export function ProductEdit() {
   const [openDialog, setOpenDialog] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [sheetId, setSheetId] = useState<string>('')
+  const [rejectionComments, setRejectionComments] = useState<string>('')
+  const [makerResponse, setMakerResponse] = useState<string>('')
 
   // Form state
   const [productName, setProductName] = useState('')
@@ -64,6 +66,11 @@ export function ProductEdit() {
       const response = await flowableApi.getTaskVariables(taskId)
       const sid = response.sheetId as string
       setSheetId(sid)
+      
+      // Check if this is a rejected task coming back
+      if (response.stage1RejectionComments) {
+        setRejectionComments(response.stage1RejectionComments as string)
+      }
     } catch (err) {
       setError('Failed to load task details')
       console.error('Error:', err)
@@ -141,15 +148,22 @@ export function ProductEdit() {
 
   const handleCompleteTask = async () => {
     if (!taskId) return
+    
+    if (products.length === 0) {
+      setError('Please add at least one product before submitting')
+      return
+    }
 
     try {
       setLoading(true)
       await flowableApi.completeTask(taskId, {
         products: products,
         sheetId,
-        stage1Decision: 'COMPLETE'
+        makerComments: makerResponse || 'Products submitted for approval',
+        stage1Decision: 'COMPLETE',
+        submittedAt: new Date().toISOString()
       })
-      setSuccessMessage('Task completed successfully!')
+      setSuccessMessage('Products submitted successfully!')
       setTimeout(() => navigate('/maker'), 2000)
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to complete task')
@@ -179,15 +193,28 @@ export function ProductEdit() {
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
+        <Box mb={3}>
+          <Typography variant="h5" gutterBottom>
+            Edit Products - Stage 1
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Sheet ID: {sheetId}
+          </Typography>
+          
+          {rejectionComments && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                <strong>Checker's Feedback - Please Address:</strong>
+              </Typography>
+              <Typography variant="body2">
+                {rejectionComments}
+              </Typography>
+            </Alert>
+          )}
+        </Box>
+
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Box>
-            <Typography variant="h5" gutterBottom>
-              Edit Products - Stage 1
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Sheet ID: {sheetId}
-            </Typography>
-          </Box>
+          <Box></Box>
           <Button
             variant="contained"
             color="primary"
@@ -267,6 +294,19 @@ export function ProductEdit() {
               </Table>
             </TableContainer>
 
+            <Paper sx={{ p: 2, mb: 3 }}>
+              <TextField
+                fullWidth
+                label="Comments for Checker"
+                value={makerResponse}
+                onChange={(e) => setMakerResponse(e.target.value)}
+                multiline
+                rows={3}
+                placeholder={rejectionComments ? "Explain what you've corrected..." : "Optional: Add any notes for the checker..."}
+                helperText={rejectionComments ? "Please explain the changes you made to address the feedback" : ""}
+              />
+            </Paper>
+
             <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
               <Button
                 variant="outlined"
@@ -282,7 +322,7 @@ export function ProductEdit() {
                 onClick={handleCompleteTask}
                 disabled={loading || products.length === 0}
               >
-                Complete Task & Save Products
+                Submit for Approval
               </Button>
             </Box>
           </>

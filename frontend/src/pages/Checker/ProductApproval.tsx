@@ -31,6 +31,8 @@ export function ProductApproval() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [sheetId, setSheetId] = useState<string>('')
   const [comments, setComments] = useState('')
+  const [makerComments, setMakerComments] = useState<string>('')
+  const [rejectionHistory, setRejectionHistory] = useState<string>('')
 
   useEffect(() => {
     if (taskId && processInstanceId) {
@@ -50,6 +52,16 @@ export function ProductApproval() {
       const response = await flowableApi.getTaskVariables(taskId)
       const sid = response.sheetId as string
       setSheetId(sid)
+      
+      // Load previous rejection comments if any
+      if (response.stage1RejectionComments) {
+        setRejectionHistory(response.stage1RejectionComments as string)
+      }
+      
+      // Load maker's comments
+      if (response.makerComments) {
+        setMakerComments(response.makerComments as string)
+      }
     } catch (err) {
       setError('Failed to load task details')
       console.error('Error:', err)
@@ -89,7 +101,7 @@ export function ProductApproval() {
 
   const handleReject = async () => {
     if (!comments.trim()) {
-      setError('Please provide rejection comments')
+      setError('Please provide rejection comments explaining what needs to be fixed')
       return
     }
 
@@ -98,9 +110,11 @@ export function ProductApproval() {
         checkerComments: comments,
         checkerDecision: 'REJECT',
         approved: false,
-        stage1Decision: 'REJECT'
+        stage1Decision: 'REJECT',
+        stage1RejectionComments: comments, // Store for maker to see
+        rejectedAt: new Date().toISOString()
       })
-      setSuccessMessage('Products rejected successfully')
+      setSuccessMessage('Products rejected - Sent back to Maker for corrections')
       setTimeout(() => navigate('/checker'), 2000)
     } catch (err) {
       setError('Failed to reject products')
@@ -145,9 +159,31 @@ export function ProductApproval() {
       )}
 
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          Sheet ID: {sheetId}
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          <strong>Sheet ID:</strong> {sheetId}
         </Typography>
+        
+        {makerComments && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Maker's Comments:
+            </Typography>
+            <Typography variant="body2">
+              {makerComments}
+            </Typography>
+          </Box>
+        )}
+        
+        {rejectionHistory && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom color="error">
+              Previous Rejection Comments:
+            </Typography>
+            <Typography variant="body2">
+              {rejectionHistory}
+            </Typography>
+          </Box>
+        )}
       </Paper>
 
       <TableContainer component={Paper} sx={{ mb: 3 }}>
@@ -193,7 +229,9 @@ export function ProductApproval() {
           onChange={(e) => setComments(e.target.value)}
           multiline
           rows={4}
-          placeholder="Add your comments (required for rejection)"
+          placeholder="Provide feedback here. For rejection, clearly explain what needs to be corrected."
+          helperText="For rejection: Specify which products need changes and what corrections are required"
+          required
         />
       </Paper>
 
