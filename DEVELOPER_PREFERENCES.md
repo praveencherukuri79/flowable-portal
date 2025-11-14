@@ -106,6 +106,15 @@ This document captures the developer's preferences and recommendations for worki
 
 ## 🚀 Git Commit Practices
 
+### ⚠️ CRITICAL: Never Auto-Commit
+- **NEVER run `git commit` automatically**
+- **NEVER run `git push` automatically**
+- **ALWAYS ask the user first** before committing
+- Only commit when **explicitly requested** by the user
+- The user will tell you when to commit
+
+**This is VERY IMPORTANT** - the user feels you are being too proactive if you commit without asking.
+
 ### Commit Messages
 - Be descriptive but concise
 - Mention what was fixed and why
