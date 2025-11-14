@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                   xmlns:flowable="http://flowable.org/bpmn"
+                   id="GenericMakerCheckerProcessDefinitions" 
+                   targetNamespace="http://www.makerchecker.process" 
+                   exporter="Flowable Open Source Modeler" 
+                   exporterVersion="6.8.0">
+  
+  <bpmn2:process id="genericMakerCheckerProcess" name="Generic Maker-Checker Approval Process" isExecutable="true">
+    
+    <!-- Start Event -->
+    <bpmn2:startEvent id="startEvent" name="Start Request">
+      <bpmn2:outgoing>flow1</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    
+    <!-- Maker Task -->
+    <bpmn2:userTask id="makerTask" name="Create Request" flowable:candidateGroups="makers,requestors">
+      <bpmn2:documentation>Create and submit a new request for approval</bpmn2:documentation>
+      <bpmn2:extensionElements>
+        <flowable:formProperty id="requestType" name="Request Type" type="enum" required="true">
+          <flowable:value id="expense" name="Expense Request"/>
+          <flowable:value id="purchase" name="Purchase Order"/>
+          <flowable:value id="contract" name="Contract Approval"/>
+          <flowable:value id="policy" name="Policy Change"/>
+          <flowable:value id="other" name="Other"/>
+        </flowable:formProperty>
+        <flowable:formProperty id="title" name="Request Title" type="string" required="true"/>
+        <flowable:formProperty id="description" name="Description" type="string" required="true"/>
+        <flowable:formProperty id="amount" name="Amount (if applicable)" type="long"/>
+        <flowable:formProperty id="urgency" name="Urgency Level" type="enum" required="true">
+          <flowable:value id="low" name="Low"/>
+          <flowable:value id="medium" name="Medium"/>
+          <flowable:value id="high" name="High"/>
+          <flowable:value id="critical" name="Critical"/>
+        </flowable:formProperty>
+        <flowable:formProperty id="requestedBy" name="Requested By" type="string" required="true"/>
+        <flowable:formProperty id="department" name="Department" type="string" required="true"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>flow1</bpmn2:incoming>
+      <bpmn2:incoming>flow9</bpmn2:incoming>
+      <bpmn2:outgoing>flow2</bpmn2:outgoing>
+    </bpmn2:userTask>
+    
+    <!-- Gateway: Amount Check -->
+    <bpmn2:exclusiveGateway id="amountCheckGateway" name="Amount Check">
+      <bpmn2:incoming>flow2</bpmn2:incoming>
+      <bpmn2:outgoing>flow3</bpmn2:outgoing>
+      <bpmn2:outgoing>flow4</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    
+    <!-- Level 1 Checker Task -->
+    <bpmn2:userTask id="level1CheckerTask" name="Level 1 Review" flowable:candidateGroups="supervisors,level1-checkers">
+      <bpmn2:documentation>First level review and approval</bpmn2:documentation>
+      <bpmn2:extensionElements>
+        <flowable:formProperty id="level1Decision" name="Level 1 Decision" type="enum" required="true">
+          <flowable:value id="approve" name="Approve"/>
+          <flowable:value id="reject" name="Reject"/>
+          <flowable:value id="sendback" name="Send Back for Revision"/>
+        </flowable:formProperty>
+        <flowable:formProperty id="level1Comments" name="Level 1 Comments" type="string"/>
+        <flowable:formProperty id="reviewedBy" name="Reviewed By" type="string" required="true"/>
+        <flowable:formProperty id="reviewDate" name="Review Date" type="date" required="true"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>flow3</bpmn2:incoming>
+      <bpmn2:incoming>flow4</bpmn2:incoming>
+      <bpmn2:outgoing>flow5</bpmn2:outgoing>
+    </bpmn2:userTask>
+    
+    <!-- Gateway: Level 1 Decision -->
+    <bpmn2:exclusiveGateway id="level1DecisionGateway" name="Level 1 Decision">
+      <bpmn2:incoming>flow5</bpmn2:incoming>
+      <bpmn2:outgoing>flow6</bpmn2:outgoing>
+      <bpmn2:outgoing>flow8</bpmn2:outgoing>
+      <bpmn2:outgoing>flow10</bpmn2:outgoing>
+      <bpmn2:outgoing>flow11</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    
+    <!-- Level 2 Checker Task -->
+    <bpmn2:userTask id="level2CheckerTask" name="Level 2 Review" flowable:candidateGroups="managers,level2-checkers">
+      <bpmn2:documentation>Second level review and final approval</bpmn2:documentation>
+      <bpmn2:extensionElements>
+        <flowable:formProperty id="level2Decision" name="Level 2 Decision" type="enum" required="true">
+          <flowable:value id="approve" name="Approve"/>
+          <flowable:value id="reject" name="Reject"/>
+          <flowable:value id="sendback" name="Send Back for Revision"/>
+        </flowable:formProperty>
+        <flowable:formProperty id="level2Comments" name="Level 2 Comments" type="string"/>
+        <flowable:formProperty id="finalApprover" name="Final Approver" type="string" required="true"/>
+        <flowable:formProperty id="approvalDate" name="Approval Date" type="date" required="true"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>flow6</bpmn2:incoming>
+      <bpmn2:outgoing>flow7</bpmn2:outgoing>
+    </bpmn2:userTask>
+    
+    <!-- Gateway: Level 2 Decision -->
+    <bpmn2:exclusiveGateway id="level2DecisionGateway" name="Level 2 Decision">
+      <bpmn2:incoming>flow7</bpmn2:incoming>
+      <bpmn2:outgoing>flow12</bpmn2:outgoing>
+      <bpmn2:outgoing>flow13</bpmn2:outgoing>
+      <bpmn2:outgoing>flow14</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    
+    <!-- Revision Task -->
+    <bpmn2:userTask id="revisionTask" name="Revise Request" flowable:candidateGroups="makers,requestors">
+      <bpmn2:documentation>Revise the request based on reviewer feedback</bpmn2:documentation>
+      <bpmn2:extensionElements>
+        <flowable:formProperty id="revisedTitle" name="Revised Title" type="string"/>
+        <flowable:formProperty id="revisedDescription" name="Revised Description" type="string"/>
+        <flowable:formProperty id="revisedAmount" name="Revised Amount" type="long"/>
+        <flowable:formProperty id="revisionNotes" name="Revision Notes" type="string" required="true"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>flow8</bpmn2:incoming>
+      <bpmn2:incoming>flow13</bpmn2:incoming>
+      <bpmn2:outgoing>flow9</bpmn2:outgoing>
+    </bpmn2:userTask>
+    
+    <!-- Approved End Event -->
+    <bpmn2:endEvent id="approvedEndEvent" name="Request Approved">
+      <bpmn2:incoming>flow10</bpmn2:incoming>
+      <bpmn2:incoming>flow12</bpmn2:incoming>
+    </bpmn2:endEvent>
+    
+    <!-- Rejected End Event -->
+    <bpmn2:endEvent id="rejectedEndEvent" name="Request Rejected">
+      <bpmn2:incoming>flow11</bpmn2:incoming>
+      <bpmn2:incoming>flow14</bpmn2:incoming>
+    </bpmn2:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn2:sequenceFlow id="flow1" sourceRef="startEvent" targetRef="makerTask"/>
+    <bpmn2:sequenceFlow id="flow2" sourceRef="makerTask" targetRef="amountCheckGateway"/>
+    
+    <bpmn2:sequenceFlow id="flow3" name="Amount ≤ $5000" sourceRef="amountCheckGateway" targetRef="level1CheckerTask">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${amount == null || amount &lt;= 5000}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow4" name="Amount > $5000" sourceRef="amountCheckGateway" targetRef="level1CheckerTask">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${amount != null &amp;&amp; amount > 5000}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow5" sourceRef="level1CheckerTask" targetRef="level1DecisionGateway"/>
+    
+    <bpmn2:sequenceFlow id="flow6" name="Escalate to Level 2" sourceRef="level1DecisionGateway" targetRef="level2CheckerTask">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${level1Decision == 'approve' &amp;&amp; (amount == null || amount > 5000)}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow7" sourceRef="level2CheckerTask" targetRef="level2DecisionGateway"/>
+    
+    <bpmn2:sequenceFlow id="flow8" name="Send Back" sourceRef="level1DecisionGateway" targetRef="revisionTask">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${level1Decision == 'sendback'}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow9" sourceRef="revisionTask" targetRef="makerTask"/>
+    
+    <bpmn2:sequenceFlow id="flow10" name="Approve (Low Amount)" sourceRef="level1DecisionGateway" targetRef="approvedEndEvent">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${level1Decision == 'approve' &amp;&amp; (amount == null || amount &lt;= 5000)}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow11" name="Reject" sourceRef="level1DecisionGateway" targetRef="rejectedEndEvent">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${level1Decision == 'reject'}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow12" name="Approve" sourceRef="level2DecisionGateway" targetRef="approvedEndEvent">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${level2Decision == 'approve'}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow13" name="Send Back" sourceRef="level2DecisionGateway" targetRef="revisionTask">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${level2Decision == 'sendback'}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+    <bpmn2:sequenceFlow id="flow14" name="Reject" sourceRef="level2DecisionGateway" targetRef="rejectedEndEvent">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">${level2Decision == 'reject'}</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    
+  </bpmn2:process>
+  
+  <!-- Diagram Information for UI Visualization -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_genericMakerCheckerProcess">
+    <bpmndi:BPMNPlane id="BPMNPlane_genericMakerCheckerProcess" bpmnElement="genericMakerCheckerProcess">
+      
+      <bpmndi:BPMNShape id="BPMNShape_startEvent" bpmnElement="startEvent">
+        <dc:Bounds x="50" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_makerTask" bpmnElement="makerTask">
+        <dc:Bounds x="140" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_amountCheckGateway" bpmnElement="amountCheckGateway">
+        <dc:Bounds x="290" y="193" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_level1CheckerTask" bpmnElement="level1CheckerTask">
+        <dc:Bounds x="390" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_level1DecisionGateway" bpmnElement="level1DecisionGateway">
+        <dc:Bounds x="540" y="193" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_level2CheckerTask" bpmnElement="level2CheckerTask">
+        <dc:Bounds x="640" y="78" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_level2DecisionGateway" bpmnElement="level2DecisionGateway">
+        <dc:Bounds x="790" y="93" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_revisionTask" bpmnElement="revisionTask">
+        <dc:Bounds x="390" y="320" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_approvedEndEvent" bpmnElement="approvedEndEvent">
+        <dc:Bounds x="900" y="100" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="BPMNShape_rejectedEndEvent" bpmnElement="rejectedEndEvent">
+        <dc:Bounds x="900" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      
+      <!-- Sequence Flow Shapes -->
+      <bpmndi:BPMNEdge id="BPMNEdge_flow1" bpmnElement="flow1">
+        <di:waypoint x="86" y="218"/>
+        <di:waypoint x="140" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow2" bpmnElement="flow2">
+        <di:waypoint x="240" y="218"/>
+        <di:waypoint x="290" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow3" bpmnElement="flow3">
+        <di:waypoint x="340" y="218"/>
+        <di:waypoint x="390" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow4" bpmnElement="flow4">
+        <di:waypoint x="340" y="218"/>
+        <di:waypoint x="390" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow5" bpmnElement="flow5">
+        <di:waypoint x="490" y="218"/>
+        <di:waypoint x="540" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow6" bpmnElement="flow6">
+        <di:waypoint x="565" y="193"/>
+        <di:waypoint x="565" y="118"/>
+        <di:waypoint x="640" y="118"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow7" bpmnElement="flow7">
+        <di:waypoint x="740" y="118"/>
+        <di:waypoint x="790" y="118"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow8" bpmnElement="flow8">
+        <di:waypoint x="565" y="243"/>
+        <di:waypoint x="565" y="360"/>
+        <di:waypoint x="490" y="360"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow9" bpmnElement="flow9">
+        <di:waypoint x="390" y="360"/>
+        <di:waypoint x="190" y="360"/>
+        <di:waypoint x="190" y="258"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow10" bpmnElement="flow10">
+        <di:waypoint x="590" y="218"/>
+        <di:waypoint x="918" y="218"/>
+        <di:waypoint x="918" y="136"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow11" bpmnElement="flow11">
+        <di:waypoint x="590" y="218"/>
+        <di:waypoint x="900" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow12" bpmnElement="flow12">
+        <di:waypoint x="840" y="118"/>
+        <di:waypoint x="900" y="118"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow13" bpmnElement="flow13">
+        <di:waypoint x="815" y="143"/>
+        <di:waypoint x="815" y="360"/>
+        <di:waypoint x="490" y="360"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="BPMNEdge_flow14" bpmnElement="flow14">
+        <di:waypoint x="815" y="143"/>
+        <di:waypoint x="815" y="218"/>
+        <di:waypoint x="900" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  
+</bpmn2:definitions>

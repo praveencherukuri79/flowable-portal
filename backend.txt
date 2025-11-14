@@ -1,0 +1,414 @@
+package com.example.flowableportal.admin;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import org.flowable.engine.*;
+import org.flowable.engine.history.HistoricProcessInstance;
+import org.flowable.engine.history.HistoricVariableInstance;
+import org.flowable.engine.repository.ProcessDefinition;
+import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.eventlog.api.EventLogEntry;
+import org.flowable.task.api.Task;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/* ============================================================
+   ✅ CONTROLLER
+   ============================================================ */
+
+@RestController
+@RequestMapping("/api/admin")
+@RequiredArgsConstructor
+@Tag(name = "Admin APIs", description = "Flowable Admin Portal Controller")
+public class AdminController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
+
+    private final AdminRuntimeService runtimeService;
+    private final AdminTaskService taskService;
+    private final AdminMetricsService metricsService;
+
+    @GetMapping("/definitions")
+    @Operation(summary = "Get all deployed process definitions")
+    public List<ProcessDefinitionDto> listDefinitions() {
+        log.info("Fetching all process definitions");
+        return runtimeService.getProcessDefinitions();
+    }
+
+    @GetMapping("/instances/search")
+    @Operation(summary = "Search process instances")
+    public PagedResponse<ProcessInstanceDto> searchInstances(
+            @RequestParam(required = false) String definitionKey,
+            @RequestParam(required = false) String state,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        log.info("Searching process instances");
+        return runtimeService.searchProcessInstances(definitionKey, state, page, size);
+    }
+
+    @GetMapping("/tasks/search")
+    @Operation(summary = "Search tasks")
+    public PagedResponse<TaskDto> searchTasks(
+            @RequestParam(required = false) String candidateGroup,
+            @RequestParam(required = false) String state,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        log.info("Searching tasks");
+        return taskService.searchTasks(candidateGroup, state, page, size);
+    }
+
+    @GetMapping("/events/search")
+    @Operation(summary = "Fetch event logs")
+    public List<EventLogDto> listEvents(@RequestParam(defaultValue = "100") int limit) {
+        log.info("Fetching last {} event logs", limit);
+        return runtimeService.getEventLogs(limit);
+    }
+
+    @GetMapping("/metrics")
+    @Operation(summary = "Get dashboard metrics")
+    public MetricsDto getMetrics() {
+        log.info("Building dashboard metrics");
+        return metricsService.getMetrics();
+    }
+
+    @GetMapping(value = "/diagram/{processInstanceId}", produces = MediaType.IMAGE_SVG_XML_VALUE)
+    @Operation(summary = "Generate runtime process diagram")
+    public String getDiagram(@PathVariable String processInstanceId) {
+        log.info("Generating process diagram for instance: {}", processInstanceId);
+        return runtimeService.generateProcessDiagramSvg(processInstanceId);
+    }
+}
+
+/* ============================================================
+   ✅ SERVICE INTERFACES
+   ============================================================ */
+
+interface AdminRuntimeService {
+    List<ProcessDefinitionDto> getProcessDefinitions();
+    PagedResponse<ProcessInstanceDto> searchProcessInstances(String definitionKey, String state, int page, int size);
+    List<EventLogDto> getEventLogs(int limit);
+    String generateProcessDiagramSvg(String processInstanceId);
+}
+
+interface AdminTaskService {
+    PagedResponse<TaskDto> searchTasks(String candidateGroup, String state, int page, int size);
+}
+
+interface AdminMetricsService {
+    MetricsDto getMetrics();
+}
+
+/* ============================================================
+   ✅ SERVICE IMPLEMENTATIONS
+   ============================================================ */
+
+@Service
+@RequiredArgsConstructor
+class AdminRuntimeServiceImpl implements AdminRuntimeService {
+
+    private final RepositoryService repositoryService;
+    private final HistoryService historyService;
+    private final RuntimeService runtimeService;
+    private final ManagementService managementService;
+
+    @Override
+    public List<ProcessDefinitionDto> getProcessDefinitions() {
+        return repositoryService.createProcessDefinitionQuery()
+                .latestVersion()
+                .list()
+                .stream()
+                .map(DtoMapper::toProcessDefinitionDto)
+                .toList();
+    }
+
+    @Override
+    public PagedResponse<ProcessInstanceDto> searchProcessInstances(String definitionKey, String state, int page, int size) {
+        var query = historyService.createHistoricProcessInstanceQuery();
+
+        if (definitionKey != null && !definitionKey.isBlank()) {
+            query.processDefinitionKey(definitionKey);
+        }
+        if ("RUNNING".equalsIgnoreCase(state)) query.unfinished();
+        if ("COMPLETED".equalsIgnoreCase(state)) query.finished();
+
+        long total = query.count();
+        List<HistoricProcessInstance> results = query.orderByStartTime().desc().listPage(page * size, size);
+
+        List<ProcessInstanceDto> content = results.stream()
+                .map(pi -> DtoMapper.toProcessInstanceDto(pi, getVariables(pi.getId())))
+                .toList();
+
+        PagedResponse<ProcessInstanceDto> response = new PagedResponse<>();
+        response.setTotal(total);
+        response.setContent(content);
+        return response;
+    }
+
+    @Override
+    public List<EventLogDto> getEventLogs(int limit) {
+        return managementService.getEventLogEntries(0, limit)
+                .stream()
+                .map(DtoMapper::toEventLogDto)
+                .toList();
+    }
+
+    @Override
+    public String generateProcessDiagramSvg(String processInstanceId) {
+        ProcessInstance pi = runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).singleResult();
+        if (pi == null) throw new RuntimeException("Process instance not found: " + processInstanceId);
+
+        byte[] svg = managementService.executeCommand(new org.flowable.engine.impl.cmd.GetDeploymentProcessDiagramCmd(pi.getProcessDefinitionId()));
+        return svg != null ? new String(svg, StandardCharsets.UTF_8) : "";
+    }
+
+    private Map<String, Object> getVariables(String processInstanceId) {
+        return historyService.createHistoricVariableInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .list()
+                .stream()
+                .collect(Collectors.toMap(HistoricVariableInstance::getVariableName, HistoricVariableInstance::getValue));
+    }
+}
+
+@Service
+@RequiredArgsConstructor
+class AdminTaskServiceImpl implements AdminTaskService {
+
+    private final TaskService taskService;
+    private final HistoryService historyService;
+
+    @Override
+    public PagedResponse<TaskDto> searchTasks(String candidateGroup, String state, int page, int size) {
+        var query = taskService.createTaskQuery();
+
+        if (candidateGroup != null && !candidateGroup.isBlank()) query.taskCandidateGroup(candidateGroup);
+        if ("CLAIMABLE".equalsIgnoreCase(state)) query.taskUnassigned();
+        if ("ASSIGNED".equalsIgnoreCase(state)) query.taskAssigned();
+
+        long total = query.count();
+        List<Task> tasks = query.orderByTaskCreateTime().desc().listPage(page * size, size);
+
+        List<TaskDto> dtos = tasks.stream()
+                .map(t -> DtoMapper.toTaskDto(t, getVariables(t.getProcessInstanceId())))
+                .toList();
+
+        PagedResponse<TaskDto> response = new PagedResponse<>();
+        response.setTotal(total);
+        response.setContent(dtos);
+        return response;
+    }
+
+    private Map<String, Object> getVariables(String processInstanceId) {
+        if (processInstanceId == null) return Collections.emptyMap();
+        return historyService.createHistoricVariableInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .list()
+                .stream()
+                .collect(Collectors.toMap(HistoricVariableInstance::getVariableName, HistoricVariableInstance::getValue));
+    }
+}
+
+@Service
+@RequiredArgsConstructor
+class AdminMetricsServiceImpl implements AdminMetricsService {
+
+    private final HistoryService historyService;
+    private final TaskService taskService;
+
+    @Override
+    public MetricsDto getMetrics() {
+        MetricsDto dto = new MetricsDto();
+
+        // Instances by day (7 days)
+        List<MetricsDto.DailyCount> dailyCounts = new ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            Date start = Date.from(LocalDate.now().minusDays(i).atStartOfDay(ZoneId.systemDefault()).toInstant());
+            Date end = Date.from(LocalDate.now().minusDays(i - 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+            long count = historyService.createHistoricProcessInstanceQuery()
+                    .startedAfter(start).startedBefore(end).count();
+            MetricsDto.DailyCount dc = new MetricsDto.DailyCount();
+            dc.setDay(LocalDate.now().minusDays(i).toString());
+            dc.setCount(count);
+            dailyCounts.add(dc);
+        }
+
+        MetricsDto.StateCount claimable = new MetricsDto.StateCount();
+        claimable.setState("CLAIMABLE");
+        claimable.setCount(taskService.createTaskQuery().taskUnassigned().count());
+
+        MetricsDto.StateCount assigned = new MetricsDto.StateCount();
+        assigned.setState("ASSIGNED");
+        assigned.setCount(taskService.createTaskQuery().taskAssigned().count());
+
+        dto.setInstancesByDay(dailyCounts);
+        dto.setTasksByState(List.of(claimable, assigned));
+        dto.setAvgDurationByDefinition(Collections.emptyList());
+        return dto;
+    }
+}
+
+/* ============================================================
+   ✅ DTO CLASSES
+   ============================================================ */
+
+@Getter @Setter
+class ProcessDefinitionDto {
+    private String id;
+    private String key;
+    private String name;
+    private String category;
+    private String description;
+    private int version;
+    private String deploymentId;
+    private String resourceName;
+    private String diagramResourceName;
+    private boolean suspended;
+}
+
+@Getter @Setter
+class ProcessInstanceDto {
+    private String id;
+    private String definitionId;
+    private String definitionKey;
+    private String businessKey;
+    private String startUserId;
+    private Date startTime;
+    private Date endTime;
+    private String state;
+    private String tenantId;
+    private Map<String, Object> variables;
+}
+
+@Getter @Setter
+class TaskDto {
+    private String id;
+    private String name;
+    private String assignee;
+    private String owner;
+    private Date createTime;
+    private Date dueDate;
+    private String processInstanceId;
+    private String processDefinitionId;
+    private String state;
+    private Map<String, Object> variables;
+}
+
+@Getter @Setter
+class EventLogDto {
+    private String id;
+    private Date timestamp;
+    private String type;
+    private String processDefinitionId;
+    private String processInstanceId;
+    private String executionId;
+    private String data;
+}
+
+@Getter @Setter
+class MetricsDto {
+    private List<DailyCount> instancesByDay;
+    private List<StateCount> tasksByState;
+    private List<DurationMetric> avgDurationByDefinition;
+
+    @Getter @Setter
+    public static class DailyCount {
+        private String day;
+        private long count;
+    }
+
+    @Getter @Setter
+    public static class StateCount {
+        private String state;
+        private long count;
+    }
+
+    @Getter @Setter
+    public static class DurationMetric {
+        private String definitionKey;
+        private double minutes;
+    }
+}
+
+@Getter @Setter
+class PagedResponse<T> {
+    private List<T> content;
+    private long total;
+}
+
+/* ============================================================
+   ✅ DTO MAPPER (Static Converters)
+   ============================================================ */
+
+final class DtoMapper {
+
+    private DtoMapper() {}
+
+    public static ProcessDefinitionDto toProcessDefinitionDto(ProcessDefinition d) {
+        ProcessDefinitionDto dto = new ProcessDefinitionDto();
+        dto.setId(d.getId());
+        dto.setKey(d.getKey());
+        dto.setName(d.getName());
+        dto.setCategory(d.getCategory());
+        dto.setDescription(d.getDescription());
+        dto.setVersion(d.getVersion());
+        dto.setDeploymentId(d.getDeploymentId());
+        dto.setResourceName(d.getResourceName());
+        dto.setDiagramResourceName(d.getDiagramResourceName());
+        dto.setSuspended(d.isSuspended());
+        return dto;
+    }
+
+    public static ProcessInstanceDto toProcessInstanceDto(HistoricProcessInstance pi, Map<String, Object> vars) {
+        ProcessInstanceDto dto = new ProcessInstanceDto();
+        dto.setId(pi.getId());
+        dto.setDefinitionId(pi.getProcessDefinitionId());
+        dto.setDefinitionKey(pi.getProcessDefinitionKey());
+        dto.setBusinessKey(pi.getBusinessKey());
+        dto.setStartUserId(pi.getStartUserId());
+        dto.setStartTime(pi.getStartTime());
+        dto.setEndTime(pi.getEndTime());
+        dto.setTenantId(pi.getTenantId());
+        dto.setState(pi.getEndTime() == null ? "RUNNING" : "COMPLETED");
+        dto.setVariables(vars);
+        return dto;
+    }
+
+    public static TaskDto toTaskDto(Task t, Map<String, Object> vars) {
+        TaskDto dto = new TaskDto();
+        dto.setId(t.getId());
+        dto.setName(t.getName());
+        dto.setAssignee(t.getAssignee());
+        dto.setOwner(t.getOwner());
+        dto.setCreateTime(t.getCreateTime());
+        dto.setDueDate(t.getDueDate());
+        dto.setProcessInstanceId(t.getProcessInstanceId());
+        dto.setProcessDefinitionId(t.getProcessDefinitionId());
+        dto.setState(t.getAssignee() == null ? "CLAIMABLE" : "ASSIGNED");
+        dto.setVariables(vars);
+        return dto;
+    }
+
+    public static EventLogDto toEventLogDto(EventLogEntry e) {
+        EventLogDto dto = new EventLogDto();
+        dto.setId(String.valueOf(e.getLogNumber()));
+        dto.setTimestamp(e.getTimeStamp());
+        dto.setType(e.getType());
+        dto.setProcessDefinitionId(e.getProcessDefinitionId());
+        dto.setProcessInstanceId(e.getProcessInstanceId());
+        dto.setExecutionId(e.getExecutionId());
+        dto.setData(e.getData() != null ? new String(e.getData()) : null);
+        return dto;
+    }
+}

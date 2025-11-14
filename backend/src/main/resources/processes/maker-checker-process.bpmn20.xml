@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+
+    <process id="makerCheckerProcess" name="Maker Checker Approval Process" isExecutable="true">
+        
+        <startEvent id="startEvent" name="Start"/>
+        
+        <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="makerTask"/>
+        
+        <userTask id="makerTask" name="Maker: Create Request" flowable:candidateGroups="MAKER">
+            <extensionElements>
+                <flowable:formProperty id="requestTitle" name="Request Title" type="string" required="true"/>
+                <flowable:formProperty id="requestDescription" name="Description" type="string" required="true"/>
+                <flowable:formProperty id="amount" name="Amount" type="long"/>
+                <flowable:formProperty id="makerComments" name="Maker Comments" type="string"/>
+            </extensionElements>
+        </userTask>
+        
+        <sequenceFlow id="flow2" sourceRef="makerTask" targetRef="checkerTask"/>
+        
+        <userTask id="checkerTask" name="Checker: Review Request" flowable:candidateGroups="CHECKER">
+            <extensionElements>
+                <flowable:formProperty id="checkerDecision" name="Decision" type="enum" required="true">
+                    <flowable:value id="APPROVE" name="Approve"/>
+                    <flowable:value id="REJECT" name="Reject"/>
+                </flowable:formProperty>
+                <flowable:formProperty id="checkerComments" name="Checker Comments" type="string" required="true"/>
+            </extensionElements>
+        </userTask>
+        
+        <sequenceFlow id="flow3" sourceRef="checkerTask" targetRef="decisionGateway"/>
+        
+        <exclusiveGateway id="decisionGateway" name="Approved?"/>
+        
+        <sequenceFlow id="flow4" sourceRef="decisionGateway" targetRef="approvedEnd" name="Approved">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${checkerDecision == 'APPROVE'}
+            </conditionExpression>
+        </sequenceFlow>
+        
+        <sequenceFlow id="flow5" sourceRef="decisionGateway" targetRef="rejectedEnd" name="Rejected">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${checkerDecision == 'REJECT'}
+            </conditionExpression>
+        </sequenceFlow>
+        
+        <endEvent id="approvedEnd" name="Approved"/>
+        <endEvent id="rejectedEnd" name="Rejected"/>
+        
+    </process>
+</definitions>
+

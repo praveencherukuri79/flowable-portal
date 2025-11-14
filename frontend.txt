@@ -1,0 +1,546 @@
+import React from 'react'
+import axios from 'axios'
+import { Box, Tabs, Tab, Toolbar, AppBar, Container, Typography, Card, CardContent, Grid, Stack, TextField, Chip } from '@mui/material'
+import { DataGrid, GridColDef } from '@mui/x-data-grid'
+import * as d3 from 'd3'
+
+/* ============================================================
+   ✅ API Client – Updated for Query Params
+   ============================================================ */
+const api = axios.create({ baseURL: '/api/admin' })
+
+const adminApi = {
+  getDefinitions: () => api.get('/definitions'),
+  searchInstances: (params: any) => api.get('/instances/search', { params }),
+  searchTasks: (params: any) => api.get('/tasks/search', { params }),
+  searchEvents: (params: any) => api.get('/events/search', { params }),
+  getMetrics: () => api.get('/metrics'),
+  getDiagramSvg: (procInstId: string) =>
+    api.get(`/diagram/${procInstId}`, { headers: { Accept: 'image/svg+xml' } })
+}
+
+/* ============================================================
+   ✅ Main Portal Layout
+   ============================================================ */
+export default function AdminPortal() {
+  const [tab, setTab] = React.useState(0)
+
+  return (
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
+      <AppBar position="sticky" color="default" elevation={0}>
+        <Toolbar>
+          <Typography variant="h6" fontWeight={600}>Flowable Admin Portal</Typography>
+          <Box sx={{ flex: 1 }} />
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary">
+            <Tab label="Dashboard" />
+            <Tab label="Definitions" />
+            <Tab label="Instances" />
+            <Tab label="Tasks" />
+            <Tab label="Events" />
+          </Tabs>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        {tab === 0 && <AdminDashboard />}
+        {tab === 1 && <DefinitionsPage />}
+        {tab === 2 && <InstancesPage />}
+        {tab === 3 && <TasksPage />}
+        {tab === 4 && <EventsPage />}
+      </Container>
+    </Box>
+  )
+}
+
+/* ============================================================
+   📊 Dashboard
+   ============================================================ */
+function AdminDashboard() {
+  const [metrics, setMetrics] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    adminApi.getMetrics().then(res => setMetrics(res.data))
+  }, [])
+
+  return (
+    <Grid container spacing={2}>
+      <Grid item xs={12} md={4}><StatCard label="Running Instances" value={metrics?.running || 0} /></Grid>
+      <Grid item xs={12} md={4}><StatCard label="Completed Instances" value={metrics?.completed || 0} /></Grid>
+      <Grid item xs={12} md={4}><StatCard label="Total Tasks" value={metrics?.tasks || 0} /></Grid>
+      <Grid item xs={12} md={7}><InstancesByDayChart data={metrics?.instancesByDay || []} /></Grid>
+      <Grid item xs={12} md={5}><TasksByStateChart data={metrics?.tasksByState || []} /></Grid>
+    </Grid>
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent>
+        <Stack spacing={0.5}>
+          <Typography variant="overline">{label}</Typography>
+          <Typography variant="h4">{value}</Typography>
+        </Stack>
+      </CardContent>
+    </Card>
+  )
+}
+
+function InstancesByDayChart({ data }: { data: { day: string; count: number }[] }) {
+  const ref = React.useRef<SVGSVGElement>(null)
+
+  React.useEffect(() => {
+    if (!data?.length) return
+    const svg = d3.select(ref.current)
+    svg.selectAll('*').remove()
+    const width = 600, height = 280
+    const x = d3.scaleBand().domain(data.map(d => d.day)).range([0, width - 60]).padding(0.2)
+    const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count) || 1]).range([height - 60, 0])
+
+    const g = svg.append('g').attr('transform', `translate(40,20)`)
+    g.append('g').attr('transform', `translate(0,${height - 60})`).call(d3.axisBottom(x))
+    g.append('g').call(d3.axisLeft(y))
+    g.selectAll('rect').data(data).enter().append('rect')
+      .attr('x', d => x(d.day)!)
+      .attr('y', d => y(d.count))
+      .attr('width', x.bandwidth())
+      .attr('height', d => (height - 60) - y(d.count))
+      .attr('fill', '#1976d2')
+  }, [data])
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Instances by Day</Typography>
+        <svg ref={ref} width="100%" height="300" />
+      </CardContent>
+    </Card>
+  )
+}
+
+function TasksByStateChart({ data }: { data: { state: string; count: number }[] }) {
+  const ref = React.useRef<SVGSVGElement>(null)
+
+  React.useEffect(() => {
+    if (!data?.length) return
+    const svg = d3.select(ref.current)
+    svg.selectAll('*').remove()
+    const width = 300, height = 300, radius = 120
+    const g = svg.append('g').attr('transform', `translate(${width / 2},${height / 2})`)
+    const pie = d3.pie<any>().value(d => d.count)
+    const arc = d3.arc<any>().innerRadius(60).outerRadius(radius)
+    g.selectAll('path').data(pie(data)).enter().append('path')
+      .attr('d', arc)
+      .attr('fill', (_, i) => d3.schemeTableau10[i % 10])
+  }, [data])
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Tasks by State</Typography>
+        <svg ref={ref} width="100%" height="300" />
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ============================================================
+   📜 Definitions Page
+   ============================================================ */
+function DefinitionsPage() {
+  const [rows, setRows] = React.useState<any[]>([])
+  const [q, setQ] = React.useState('')
+
+  React.useEffect(() => {
+    adminApi.getDefinitions().then(res => setRows(res.data))
+  }, [])
+
+  const filtered = q ? rows.filter(r => r.key.includes(q) || r.name.includes(q)) : rows
+
+  const columns: GridColDef[] = [
+    { field: 'key', headerName: 'Key', flex: 1 },
+    { field: 'name', headerName: 'Name', flex: 1.5 },
+    { field: 'version', headerName: 'Version', width: 120 },
+    { field: 'deploymentId', headerName: 'Deployment', flex: 1.2 }
+  ]
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Process Definitions</Typography>
+        <TextField size="small" placeholder="Search..." value={q} onChange={e => setQ(e.target.value)} sx={{ mb: 2 }} />
+        <div style={{ height: 520 }}>
+          <DataGrid rows={filtered} columns={columns} getRowId={r => r.id} disableRowSelectionOnClick />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ============================================================
+   📊 Instances Page (Query Params)
+   ============================================================ */
+function InstancesPage() {
+  const [rows, setRows] = React.useState<any[]>([])
+
+  React.useEffect(() => {
+    adminApi.searchInstances({ page: 0, size: 25 }).then(res => setRows(res.data.content))
+  }, [])
+
+  const columns: GridColDef[] = [
+    { field: 'id', headerName: 'Instance ID', flex: 1.3 },
+    { field: 'definitionKey', headerName: 'Definition', flex: 1 },
+    { field: 'businessKey', headerName: 'Business Key', flex: 1 },
+    { field: 'state', headerName: 'State', width: 140 },
+    { field: 'startTime', headerName: 'Start Time', flex: 1 },
+    { field: 'endTime', headerName: 'End Time', flex: 1 }
+  ]
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Process Instances</Typography>
+        <div style={{ height: 560 }}>
+          <DataGrid rows={rows} columns={columns} getRowId={r => r.id} disableRowSelectionOnClick />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ============================================================
+   ✅ Tasks Page (Query Params)
+   ============================================================ */
+function TasksPage() {
+  const [rows, setRows] = React.useState<any[]>([])
+
+  React.useEffect(() => {
+    adminApi.searchTasks({ page: 0, size: 25 }).then(res => setRows(res.data.content))
+  }, [])
+
+  const columns: GridColDef[] = [
+    { field: 'id', headerName: 'Task ID', flex: 1.2 },
+    { field: 'name', headerName: 'Name', flex: 1.5 },
+    { field: 'assignee', headerName: 'Assignee', width: 180 },
+    { field: 'definitionKey', headerName: 'Definition', flex: 1 },
+    { field: 'createTime', headerName: 'Created', flex: 1 },
+    {
+      field: 'state',
+      headerName: 'State',
+      width: 160,
+      renderCell: p => <Chip label={p.value} color={p.value === 'CLAIMABLE' ? 'info' : 'success'} size="small" />
+    }
+  ]
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>User Tasks</Typography>
+        <div style={{ height: 560 }}>
+          <DataGrid rows={rows} columns={columns} getRowId={r => r.id} disableRowSelectionOnClick />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ============================================================
+   📑 Events Page (Query Params)
+   ============================================================ */
+function EventsPage() {
+  const [rows, setRows] = React.useState<any[]>([])
+
+  React.useEffect(() => {
+    adminApi.searchEvents({ limit: 200 }).then(res => setRows(res.data))
+  }, [])
+
+  const columns: GridColDef[] = [
+    { field: 'timestamp', headerName: 'Time', flex: 1 },
+    { field: 'type', headerName: 'Type', flex: 1 },
+    { field: 'processInstanceId', headerName: 'Process Instance', flex: 1 },
+    { field: 'executionId', headerName: 'Execution ID', flex: 1 }
+  ]
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Event Logs</Typography>
+        <div style={{ height: 560 }}>
+          <DataGrid rows={rows} columns={columns} getRowId={r => r.id} disableRowSelectionOnClick />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/////
+
+function TasksByStateChart({ data }: { data: { state: string; count: number }[] }) {
+  const ref = React.useRef<SVGSVGElement>(null);
+  const [tooltip, setTooltip] = React.useState<{ x: number; y: number; label: string } | null>(null);
+
+  React.useEffect(() => {
+    if (!data?.length) return;
+
+    const width = 320;
+    const height = 320;
+    const radius = 120;
+
+    const svg = d3.select(ref.current);
+    svg.selectAll("*").remove();
+
+    const g = svg.append("g").attr("transform", `translate(${width / 2}, ${height / 2})`);
+    const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+    const pie = d3.pie<any>().value((d) => d.count);
+    const arc = d3.arc<any>().innerRadius(60).outerRadius(radius);
+
+    // ✅ Pie slices
+    g.selectAll("path")
+      .data(pie(data))
+      .enter()
+      .append("path")
+      .attr("d", arc)
+      .attr("fill", (_, i) => color(i.toString()))
+      .on("mouseover", (e, d) => {
+        const [mx, my] = d3.pointer(e);
+        setTooltip({
+          x: mx + width / 2,
+          y: my + height / 2 - 20,
+          label: `${d.data.state}: ${d.data.count} tasks`,
+        });
+      })
+      .on("mouseout", () => setTooltip(null));
+
+    // ✅ Add labels on arcs (optional)
+    g.selectAll("text")
+      .data(pie(data))
+      .enter()
+      .append("text")
+      .attr("transform", (d) => `translate(${arc.centroid(d)})`)
+      .attr("text-anchor", "middle")
+      .attr("dy", "0.35em")
+      .style("fill", "#fff")
+      .style("font-size", "12px")
+      .text((d) => d.data.count);
+  }, [data]);
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Tasks by State</Typography>
+        <svg ref={ref} width={320} height={320} />
+        {/* ✅ Tooltip */}
+        {tooltip && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: tooltip.y,
+              left: tooltip.x,
+              background: "#333",
+              color: "#fff",
+              padding: "4px 8px",
+              borderRadius: "4px",
+              fontSize: "0.8rem",
+              pointerEvents: "none",
+              transform: "translate(-50%, -100%)",
+            }}
+          >
+            {tooltip.label}
+          </Box>
+        )}
+
+        {/* ✅ Legend */}
+        <Box sx={{ mt: 2, display: "flex", justifyContent: "center", gap: 3 }}>
+          {data.map((d, i) => (
+            <Stack key={i} direction="row" alignItems="center" spacing={1}>
+              <Box sx={{ width: 14, height: 14, bgcolor: d3.schemeTableau10[i % 10] }} />
+              <Typography variant="body2">{d.state}</Typography>
+            </Stack>
+          ))}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+
+
+//////// admin dadhboard updated
+
+import React from 'react'
+import axios from 'axios'
+import {
+  Box, Card, CardContent, Grid, Stack, Typography
+} from '@mui/material'
+import { BarChart } from '@mui/x-charts/BarChart'
+import { LineChart } from '@mui/x-charts/LineChart'
+import { PieChart } from '@mui/x-charts/PieChart'
+import { Gauge, gaugeClasses } from '@mui/x-charts/Gauge'
+
+/** Backend shape (matches your updated /api/admin/metrics) */
+type Metrics = {
+  runningInstances: number
+  completedInstances: number
+  totalTasks: number
+  instancesByDay: { day: string; count: number }[]
+  tasksByState: { state: string; count: number }[]
+  avgDurationByDefinition?: { definitionKey: string; minutes: number }[]
+}
+
+/** Simple API client just for metrics */
+const api = axios.create({ baseURL: '/api/admin' })
+const fetchMetrics = () => api.get<Metrics>('/metrics').then(r => r.data)
+
+/** ---------- DASHBOARD (MUI X Charts) ---------- */
+export default function AdminDashboard() {
+  const [metrics, setMetrics] = React.useState<Metrics | null>(null)
+
+  React.useEffect(() => {
+    fetchMetrics().then(setMetrics)
+  }, [])
+
+  const running = metrics?.runningInstances ?? 0
+  const completed = metrics?.completedInstances ?? 0
+  const tasks = metrics?.totalTasks ?? 0
+  const totalInstances = running + completed
+  const runningPct = totalInstances ? Math.round((running / totalInstances) * 100) : 0
+
+  const days = metrics?.instancesByDay?.map(d => d.day) ?? []
+  const dayCounts = metrics?.instancesByDay?.map(d => d.count) ?? []
+  const taskStatePie = metrics?.tasksByState?.map((t, i) => ({
+    id: i, label: t.state, value: t.count,
+  })) ?? []
+  const avgDur = metrics?.avgDurationByDefinition ?? []
+
+  return (
+    <Grid container spacing={2}>
+      {/* KPI Cards */}
+      <Grid item xs={12} md={3}><Kpi label="Running Instances" value={running} /></Grid>
+      <Grid item xs={12} md={3}><Kpi label="Completed Instances" value={completed} /></Grid>
+      <Grid item xs={12} md={3}><Kpi label="Total Tasks" value={tasks} /></Grid>
+      <Grid item xs={12} md={3}>
+        <Card>
+          <CardContent>
+            <Stack spacing={1}>
+              <Typography variant="overline">Running Ratio</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Gauge
+                  width={120}
+                  height={120}
+                  value={runningPct}
+                  startAngle={-110}
+                  endAngle={110}
+                  sx={{
+                    [`& .${gaugeClasses.valueText}`]: { fontSize: 18, transform: 'translateY(4px)' },
+                  }}
+                />
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Running / Total
+                  </Typography>
+                  <Typography variant="h6">{running} / {totalInstances}</Typography>
+                </Box>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Instances by Day (Bar) */}
+      <Grid item xs={12} md={7}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Instances by Day</Typography>
+            <Box sx={{ width: '100%', overflowX: 'auto' }}>
+              <BarChart
+                height={300}
+                xAxis={[{ scaleType: 'band', data: days, label: 'Day' }]}
+                series={[{ data: dayCounts, label: 'Instances' }]}
+                margin={{ left: 50, right: 10, top: 20, bottom: 40 }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Tasks by State (Pie with legend + tooltips) */}
+      <Grid item xs={12} md={5}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Tasks by State</Typography>
+            <PieChart
+              height={300}
+              series={[{
+                innerRadius: 60,
+                outerRadius: 120,
+                paddingAngle: 2,
+                arcLabel: (item) => `${item.value}`,
+                data: taskStatePie,
+              }]}
+              slotProps={{
+                legend: {
+                  direction: 'row',
+                  position: { vertical: 'bottom', horizontal: 'middle' },
+                },
+              }}
+            />
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* NEW: Instances Trend (Line) for quick trajectory view */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Instances Trend</Typography>
+            <LineChart
+              height={300}
+              xAxis={[{ scaleType: 'point', data: days }]}
+              series={[{ data: dayCounts, label: 'Instances' }]}
+              margin={{ left: 50, right: 10, top: 20, bottom: 40 }}
+            />
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* NEW: Avg Duration by Definition (Bar) */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Avg Duration by Definition (min)</Typography>
+            <Box sx={{ width: '100%', overflowX: 'auto' }}>
+              <BarChart
+                height={300}
+                xAxis={[{
+                  scaleType: 'band',
+                  data: (avgDur ?? []).map(d => d.definitionKey),
+                  label: 'Definition',
+                }]}
+                series={[{
+                  data: (avgDur ?? []).map(d => Number(d.minutes?.toFixed ? d.minutes.toFixed(2) : d.minutes)),
+                  label: 'Minutes',
+                }]}
+                margin={{ left: 60, right: 10, top: 20, bottom: 60 }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  )
+}
+
+/** ---------- Small KPI card ---------- */
+function Kpi({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent>
+        <Stack spacing={0.5}>
+          <Typography variant="overline">{label}</Typography>
+          <Typography variant="h4">{value}</Typography>
+        </Stack>
+      </CardContent>
+    </Card>
+  )
+}

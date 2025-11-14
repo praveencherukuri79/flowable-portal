@@ -1,0 +1,9 @@
+I want you to create a web app,
+
+read backend.txt and frontend.txt and all other readme files.
+
+This app will be flowable process engine 
+
+
+teck stack:
+React  18+ typescript + MUI + mui x charts + recoilJs + dayjs + springboot 3.5.3 + flowable spring boot process (7.2.0) + spring jpa + openapi + lambok
