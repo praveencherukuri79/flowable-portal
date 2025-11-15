@@ -89,7 +89,8 @@ export const PendingApprovals: React.FC = () => {
 
   const handleOpen = (task: TaskDto) => {
     if (task.formKey) {
-      navigate(task.formKey, { state: { taskId: task.id, processInstanceId: task.processInstanceId } })
+      // Pass formKey in state for backend API calls
+      navigate(task.formKey, { state: { taskId: task.id, processInstanceId: task.processInstanceId, formKey: task.formKey } })
     }
   }
 

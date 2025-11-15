@@ -70,6 +70,16 @@ public class ValidationUtils {
     }
 
     /**
+     * Alias for validateNotEmpty for collections for consistency
+     * @param collection the collection to validate
+     * @param message the error message
+     * @throws IllegalArgumentException if validation fails
+     */
+    public static void requireNonEmpty(Collection<?> collection, String message) {
+        validateNotEmpty(collection, message);
+    }
+
+    /**
      * Validates that a number is positive
      * @param value the number to validate
      * @param message the error message

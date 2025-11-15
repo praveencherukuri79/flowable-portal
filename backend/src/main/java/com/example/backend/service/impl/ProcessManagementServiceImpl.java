@@ -44,12 +44,10 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
             log.info("Added initiator variables");
         }
         
-        // Ensure sheetId
-        enrichedVariables = ProcessVariableUtils.ensureSheetId(enrichedVariables);
-        String generatedSheetId = (String) enrichedVariables.get("sheetId");
-        log.info("Generated/Retrieved sheetId: {}", generatedSheetId);
+        // NOTE: sheetId is NO LONGER generated at process level.
+        // Each maker task creates its own sheet and stores it as "formKey-sheetId"
         
-        // Extract business key
+        // Extract business key (use process instance ID if not provided)
         String businessKey = ProcessVariableUtils.extractBusinessKey(enrichedVariables);
         log.info("Business Key: {}", businessKey);
         

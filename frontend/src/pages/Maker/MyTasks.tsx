@@ -54,8 +54,8 @@ export const MyTasks: React.FC = () => {
 
   const handleOpen = (task: TaskDto) => {
     if (task.formKey) {
-      // Navigate using formKey
-      navigate(task.formKey, { state: { taskId: task.id, processInstanceId: task.processInstanceId } })
+      // Navigate using formKey - pass formKey in state for backend API calls
+      navigate(task.formKey, { state: { taskId: task.id, processInstanceId: task.processInstanceId, formKey: task.formKey } })
     }
   }
 

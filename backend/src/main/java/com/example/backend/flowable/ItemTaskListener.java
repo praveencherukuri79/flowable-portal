@@ -1,66 +1,47 @@
 package com.example.backend.flowable;
 
-import com.example.backend.dto.ItemDto;
-import com.example.backend.service.ItemService;
+import com.example.backend.dto.ItemStagingDto;
+import com.example.backend.util.ComparisonUtils;
+import com.example.backend.util.TaskListenerUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.delegate.TaskListener;
 import org.flowable.task.service.delegate.DelegateTask;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
- * Task listener that saves items to database when maker completes editing (Stage 3)
- * This separates business logic from process API
+ * Task listener for Item staging operations
+ * Delegates to TaskListenerUtils for shared logic
  */
 @Component("itemTaskListener")
+@RequiredArgsConstructor
 @Slf4j
 public class ItemTaskListener implements TaskListener {
     
-    @Autowired
-    private ItemService itemService;
-    
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final TaskListenerUtils taskListenerUtils;
     
     @Override
     public void notify(DelegateTask delegateTask) {
-        try {
-            log.info("ItemTaskListener triggered for task: {}", delegateTask.getName());
-            
-            // Get items from task variables
-            Object itemsObj = delegateTask.getVariable("items");
-            String sheetId = (String) delegateTask.getVariable("sheetId");
-            String editedBy = delegateTask.getAssignee();
-            
-            if (itemsObj != null && sheetId != null) {
-                // Convert items to DTOs
-                List<ItemDto> items;
-                if (itemsObj instanceof String) {
-                    items = objectMapper.readValue((String) itemsObj, new TypeReference<List<ItemDto>>(){});
-                } else if (itemsObj instanceof List) {
-                    items = objectMapper.convertValue(itemsObj, new TypeReference<List<ItemDto>>(){});
-                } else {
-                    log.warn("Unknown items type: {}", itemsObj.getClass());
-                    return;
-                }
-                
-                // Save items using service (business logic separated)
-                itemService.saveItemsFromTask(sheetId, items, editedBy);
-                
-                log.info("Saved {} items for sheet {}", items.size(), sheetId);
-            } else {
-                log.warn("Missing required variables: sheetId={}, items={}", 
-                        sheetId, itemsObj != null);
-            }
-            
-        } catch (Exception e) {
-            log.error("Error in ItemTaskListener", e);
-            throw new RuntimeException("Failed to save items: " + e.getMessage(), e);
-        }
+        taskListenerUtils.processItemStaging(
+            delegateTask,
+            "Item",
+            new TypeReference<List<ItemStagingDto>>() {},
+            this::hasItemChanged,
+            ItemStagingDto::getItemName
+        );
+    }
+    
+    /**
+     * Checks if an item's business data has changed
+     */
+    private boolean hasItemChanged(ItemStagingDto existing, ItemStagingDto incoming) {
+        return !ComparisonUtils.safeEquals(existing.getItemName(), incoming.getItemName()) ||
+               !ComparisonUtils.safeEquals(existing.getItemCategory(), incoming.getItemCategory()) ||
+               !ComparisonUtils.safeEquals(existing.getPrice(), incoming.getPrice()) ||
+               !ComparisonUtils.safeEquals(existing.getQuantity(), incoming.getQuantity()) ||
+               !ComparisonUtils.datesEqual(existing.getEffectiveDate(), incoming.getEffectiveDate());
     }
 }
-

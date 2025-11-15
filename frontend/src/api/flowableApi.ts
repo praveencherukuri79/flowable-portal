@@ -144,47 +144,87 @@ export interface Product {
   editedAt?: string
   approvedBy?: string
   approvedAt?: string
+  comments?: string
 }
 
 export interface Plan {
   id?: number
   sheetId: string
-  planCode: string
   planName: string
-  description?: string
+  planType: string
+  premium: number
+  coverageAmount: number
+  effectiveDate: string
   status: string
   editedBy?: string
   editedAt?: string
   approvedBy?: string
   approvedAt?: string
+  comments?: string
 }
 
 export interface Item {
   id?: number
   sheetId: string
-  itemCode: string
   itemName: string
-  description?: string
+  itemCategory: string
+  price: number
+  quantity: number
+  effectiveDate: string
   status: string
   editedBy?: string
   editedAt?: string
   approvedBy?: string
   approvedAt?: string
+  comments?: string
+}
+
+export interface ApprovalDataResponse {
+  sheetId: string
+  items?: any[]
+  plans?: any[]
+  products?: any[]
+  sheet: {
+    sheetId: string
+    processInstanceId: string
+    sheetType: string // item, plan, or product
+    status: string
+    createdBy?: string
+    createdAt?: string
+    approvedBy?: string
+    approvedAt?: string
+  }
 }
 
 export const dataQueryApi = {
+  // Generic API to get approval data - only need processInstanceId and entityType
+  getApprovalData: async (processInstanceId: string, entityType: 'item' | 'plan' | 'product'): Promise<ApprovalDataResponse> => {
+    const response = await axios.get<ApprovalDataResponse>(`/api/data-query/approval-data/${processInstanceId}`, {
+      params: { entityType }
+    })
+    return response.data
+  },
+  
+  // Generic API to get maker data - returns staging if exists, else master
+  getMakerData: async (processInstanceId: string, entityType: 'item' | 'plan' | 'product'): Promise<ApprovalDataResponse & { isExistingSheet: boolean }> => {
+    const response = await axios.get(`/api/data-query/maker-data/${processInstanceId}`, {
+      params: { entityType }
+    })
+    return response.data
+  },
+  
   getProductsBySheet: async (sheetId: string): Promise<Product[]> => {
-    const response = await axios.get<Product[]>(`/api/data/products/sheet/${sheetId}`)
+    const response = await axios.get<Product[]>(`/api/data-query/products/sheet/${sheetId}`)
     return response.data
   },
 
   getPlansBySheet: async (sheetId: string): Promise<Plan[]> => {
-    const response = await axios.get<Plan[]>(`/api/data/plans/sheet/${sheetId}`)
+    const response = await axios.get<Plan[]>(`/api/data-query/plans/sheet/${sheetId}`)
     return response.data
   },
 
   getItemsBySheet: async (sheetId: string): Promise<Item[]> => {
-    const response = await axios.get<Item[]>(`/api/data/items/sheet/${sheetId}`)
+    const response = await axios.get<Item[]>(`/api/data-query/items/sheet/${sheetId}`)
     return response.data
   }
 }

@@ -5,7 +5,7 @@ import com.example.backend.service.RetentionOfferService;
 import com.example.backend.util.ResponseUtils;
 import com.example.backend.util.ValidationUtils;
 import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +15,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/offers")
+@RequiredArgsConstructor
 public class RetentionOfferController {
-    @Autowired
-    private RetentionOfferService service;
+    
+    private final RetentionOfferService service;
 
     @Operation(summary = "Create a retention offer")
     @PostMapping
@@ -70,7 +71,14 @@ public class RetentionOfferController {
             // Simple pagination (in real app, use Spring Data pagination)
             int start = page * size;
             int end = Math.min(start + size, offers.size());
-            List<RetentionOffer> paginatedOffers = offers.subList(start, end);
+            
+            // Handle case where start index is beyond list size
+            List<RetentionOffer> paginatedOffers;
+            if (start >= offers.size()) {
+                paginatedOffers = new java.util.ArrayList<>();
+            } else {
+                paginatedOffers = offers.subList(start, end);
+            }
             
             return ResponseEntity.ok(ResponseUtils.successWithPagination(
                 "Offers retrieved successfully",

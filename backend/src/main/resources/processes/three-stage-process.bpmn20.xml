@@ -9,71 +9,13 @@
              expressionLanguage="http://www.w3.org/1999/XPath"
              targetNamespace="http://www.flowable.org/processdef">
 
-    <process id="threeStageProcess" name="Three Stage Approval Process (Products-Plans-Items)" isExecutable="true">
+    <process id="threeStageProcess" name="Three Stage Approval Process (Items-Plans-Products)" isExecutable="true">
         
         <!-- Start Event -->
         <startEvent id="startEvent" name="Start"/>
-        <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="stage1MakerTask"/>
+        <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="stage3MakerTask"/>
         
-        <!-- STAGE 1: Products (Maker) -->
-        <userTask id="stage1MakerTask" name="Stage 1: Maker Edit Products" 
-                  flowable:formKey="/maker/product-edit" 
-                  flowable:candidateGroups="MAKER">
-            <extensionElements>
-                <flowable:taskListener event="complete" 
-                                       delegateExpression="${productTaskListener}"/>
-            </extensionElements>
-        </userTask>
-        <sequenceFlow id="flow2" sourceRef="stage1MakerTask" targetRef="stage1CheckerTask"/>
-        
-        <!-- STAGE 1: Products (Checker) -->
-        <userTask id="stage1CheckerTask" name="Stage 1: Checker Approve Products" 
-                  flowable:formKey="/checker/product-approval" 
-                  flowable:candidateGroups="CHECKER"/>
-        <sequenceFlow id="flow3" sourceRef="stage1CheckerTask" targetRef="stage1Gateway"/>
-        
-        <!-- STAGE 1: Gateway -->
-        <exclusiveGateway id="stage1Gateway" name="Products Approved?"/>
-        <sequenceFlow id="flow4" name="Approved" sourceRef="stage1Gateway" targetRef="stage2MakerTask">
-            <conditionExpression xsi:type="tFormalExpression">
-                ${stage1Decision == 'APPROVE'}
-            </conditionExpression>
-        </sequenceFlow>
-        <sequenceFlow id="flow5" name="Rejected - Back to Maker" sourceRef="stage1Gateway" targetRef="stage1MakerTask">
-            <conditionExpression xsi:type="tFormalExpression">
-                ${stage1Decision == 'REJECT'}
-            </conditionExpression>
-        </sequenceFlow>
-        
-        <!-- STAGE 2: Plans (Maker) -->
-        <userTask id="stage2MakerTask" name="Stage 2: Maker Edit Plans" 
-                  flowable:formKey="/maker/plan-edit" 
-                  flowable:candidateGroups="MAKER">
-            <extensionElements>
-                <flowable:taskListener event="complete" 
-                                       delegateExpression="${planTaskListener}"/>
-            </extensionElements>
-        </userTask>
-        <sequenceFlow id="flow6" sourceRef="stage2MakerTask" targetRef="stage2CheckerTask"/>
-        
-        <!-- STAGE 2: Plans (Checker) -->
-        <userTask id="stage2CheckerTask" name="Stage 2: Checker Approve Plans" 
-                  flowable:formKey="/checker/plan-approval" 
-                  flowable:candidateGroups="CHECKER"/>
-        <sequenceFlow id="flow7" sourceRef="stage2CheckerTask" targetRef="stage2Gateway"/>
-        
-        <!-- STAGE 2: Gateway -->
-        <exclusiveGateway id="stage2Gateway" name="Plans Approved?"/>
-        <sequenceFlow id="flow8" name="Approved" sourceRef="stage2Gateway" targetRef="stage3MakerTask">
-            <conditionExpression xsi:type="tFormalExpression">
-                ${stage2Decision == 'APPROVE'}
-            </conditionExpression>
-        </sequenceFlow>
-        <sequenceFlow id="flow9" name="Rejected - Back to Maker" sourceRef="stage2Gateway" targetRef="stage2MakerTask">
-            <conditionExpression xsi:type="tFormalExpression">
-                ${stage2Decision == 'REJECT'}
-            </conditionExpression>
-        </sequenceFlow>
+        <!-- ========== STAGE 3: Items (First Stage) ========== -->
         
         <!-- STAGE 3: Items (Maker) -->
         <userTask id="stage3MakerTask" name="Stage 3: Maker Edit Items" 
@@ -84,29 +26,141 @@
                                        delegateExpression="${itemTaskListener}"/>
             </extensionElements>
         </userTask>
-        <sequenceFlow id="flow10" sourceRef="stage3MakerTask" targetRef="stage3CheckerTask"/>
+        <sequenceFlow id="flow2" sourceRef="stage3MakerTask" targetRef="stage3CheckerTask"/>
         
         <!-- STAGE 3: Items (Checker) -->
         <userTask id="stage3CheckerTask" name="Stage 3: Checker Approve Items" 
                   flowable:formKey="/checker/item-approval" 
                   flowable:candidateGroups="CHECKER"/>
-        <sequenceFlow id="flow11" sourceRef="stage3CheckerTask" targetRef="stage3Gateway"/>
+        <sequenceFlow id="flow3" sourceRef="stage3CheckerTask" targetRef="stage3Gateway"/>
         
         <!-- STAGE 3: Gateway -->
-        <exclusiveGateway id="stage3Gateway" name="Items Approved?"/>
-        <sequenceFlow id="flow12" name="Approved" sourceRef="stage3Gateway" targetRef="endEventApproved">
+        <exclusiveGateway id="stage3Gateway" name="Items Decision"/>
+        <sequenceFlow id="flow4" name="Approved" sourceRef="stage3Gateway" targetRef="stage2MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
                 ${stage3Decision == 'APPROVE'}
             </conditionExpression>
         </sequenceFlow>
-        <sequenceFlow id="flow13" name="Rejected - Back to Maker" sourceRef="stage3Gateway" targetRef="stage3MakerTask">
+        <sequenceFlow id="flow5" name="Rejected" sourceRef="stage3Gateway" targetRef="stage3MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
                 ${stage3Decision == 'REJECT'}
             </conditionExpression>
         </sequenceFlow>
         
+        <!-- ========== STAGE 2: Plans (Second Stage) ========== -->
+        
+        <!-- STAGE 2: Plans (Maker) -->
+        <userTask id="stage2MakerTask" name="Stage 2: Maker Edit Plans" 
+                  flowable:formKey="/maker/plan-edit" 
+                  flowable:candidateGroups="MAKER">
+            <extensionElements>
+                <flowable:taskListener event="complete" 
+                                       delegateExpression="${planTaskListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow6" sourceRef="stage2MakerTask" targetRef="stage2MakerGateway"/>
+        
+        <!-- STAGE 2: Maker Gateway (for back navigation) -->
+        <exclusiveGateway id="stage2MakerGateway" name="Plans Maker Decision"/>
+        <sequenceFlow id="flow7" name="Forward" sourceRef="stage2MakerGateway" targetRef="stage2CheckerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${empty stage2Decision or stage2Decision != 'BACK'}
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow8" name="Back to Items" sourceRef="stage2MakerGateway" targetRef="stage3MakerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage2Decision == 'BACK'}
+            </conditionExpression>
+        </sequenceFlow>
+        
+        <!-- STAGE 2: Plans (Checker) -->
+        <userTask id="stage2CheckerTask" name="Stage 2: Checker Approve Plans" 
+                  flowable:formKey="/checker/plan-approval" 
+                  flowable:candidateGroups="CHECKER"/>
+        <sequenceFlow id="flow9" sourceRef="stage2CheckerTask" targetRef="stage2CheckerGateway"/>
+        
+        <!-- STAGE 2: Checker Gateway -->
+        <exclusiveGateway id="stage2CheckerGateway" name="Plans Checker Decision"/>
+        <sequenceFlow id="flow10" name="Approved" sourceRef="stage2CheckerGateway" targetRef="stage1MakerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage2Decision == 'APPROVE'}
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow11" name="Rejected" sourceRef="stage2CheckerGateway" targetRef="stage2MakerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage2Decision == 'REJECT'}
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow12" name="Back to Items" sourceRef="stage2CheckerGateway" targetRef="stage3MakerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage2Decision == 'BACK'}
+            </conditionExpression>
+        </sequenceFlow>
+        
+        <!-- ========== STAGE 1: Products (Third Stage) ========== -->
+        
+        <!-- STAGE 1: Products (Maker) -->
+        <userTask id="stage1MakerTask" name="Stage 1: Maker Edit Products" 
+                  flowable:formKey="/maker/product-edit" 
+                  flowable:candidateGroups="MAKER">
+            <extensionElements>
+                <flowable:taskListener event="complete" 
+                                       delegateExpression="${productTaskListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow13" sourceRef="stage1MakerTask" targetRef="stage1MakerGateway"/>
+        
+        <!-- STAGE 1: Maker Gateway (for back navigation) -->
+        <exclusiveGateway id="stage1MakerGateway" name="Products Maker Decision"/>
+        <sequenceFlow id="flow14" name="Forward" sourceRef="stage1MakerGateway" targetRef="stage1CheckerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${empty stage1Decision or stage1Decision != 'BACK'}
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow15" name="Back to Plans" sourceRef="stage1MakerGateway" targetRef="stage2MakerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage1Decision == 'BACK'}
+            </conditionExpression>
+        </sequenceFlow>
+        
+        <!-- STAGE 1: Products (Checker) -->
+        <userTask id="stage1CheckerTask" name="Stage 1: Checker Approve Products" 
+                  flowable:formKey="/checker/product-approval" 
+                  flowable:candidateGroups="CHECKER"/>
+        <sequenceFlow id="flow16" sourceRef="stage1CheckerTask" targetRef="stage1CheckerGateway"/>
+        
+        <!-- STAGE 1: Checker Gateway -->
+        <exclusiveGateway id="stage1CheckerGateway" name="Products Checker Decision"/>
+        <sequenceFlow id="flow17" name="Approved" sourceRef="stage1CheckerGateway" targetRef="migrationTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage1Decision == 'APPROVE'}
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow18" name="Rejected" sourceRef="stage1CheckerGateway" targetRef="stage1MakerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage1Decision == 'REJECT'}
+            </conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flow19" name="Back to Plans" sourceRef="stage1CheckerGateway" targetRef="stage2MakerTask">
+            <conditionExpression xsi:type="tFormalExpression">
+                ${stage1Decision == 'BACK'}
+            </conditionExpression>
+        </sequenceFlow>
+        
+        <!-- ========== Final Migration Task ========== -->
+        
+        <userTask id="migrationTask" name="Final: Migrate Data to Production" 
+                  flowable:formKey="/admin/data-migration" 
+                  flowable:candidateGroups="ADMIN">
+            <extensionElements>
+                <flowable:taskListener event="complete" 
+                                       delegateExpression="${dataMigrationTaskListener}"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow20" sourceRef="migrationTask" targetRef="endEventApproved"/>
+        
         <!-- End Event -->
-        <endEvent id="endEventApproved" name="All Stages Approved"/>
+        <endEvent id="endEventApproved" name="Process Complete"/>
         
     </process>
     
@@ -116,109 +170,159 @@
             
             <!-- Start Event -->
             <bpmndi:BPMNShape id="shape_startEvent" bpmnElement="startEvent">
-                <omgdc:Bounds x="100" y="200" width="36" height="36"/>
+                <omgdc:Bounds x="50" y="300" width="36" height="36"/>
             </bpmndi:BPMNShape>
-            
-            <!-- Stage 1: Products -->
-            <bpmndi:BPMNShape id="shape_stage1MakerTask" bpmnElement="stage1MakerTask">
-                <omgdc:Bounds x="200" y="178" width="100" height="80"/>
-            </bpmndi:BPMNShape>
-            <bpmndi:BPMNShape id="shape_stage1CheckerTask" bpmnElement="stage1CheckerTask">
-                <omgdc:Bounds x="360" y="178" width="100" height="80"/>
-            </bpmndi:BPMNShape>
-            <bpmndi:BPMNShape id="shape_stage1Gateway" bpmnElement="stage1Gateway">
-                <omgdc:Bounds x="520" y="193" width="50" height="50"/>
-            </bpmndi:BPMNShape>
-            
-            <!-- Stage 2: Plans -->
-            <bpmndi:BPMNShape id="shape_stage2MakerTask" bpmnElement="stage2MakerTask">
-                <omgdc:Bounds x="640" y="178" width="100" height="80"/>
-            </bpmndi:BPMNShape>
-            <bpmndi:BPMNShape id="shape_stage2CheckerTask" bpmnElement="stage2CheckerTask">
-                <omgdc:Bounds x="800" y="178" width="100" height="80"/>
-            </bpmndi:BPMNShape>
-            <bpmndi:BPMNShape id="shape_stage2Gateway" bpmnElement="stage2Gateway">
-                <omgdc:Bounds x="960" y="193" width="50" height="50"/>
-            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow1" bpmnElement="flow1">
+                <omgdi:waypoint x="86" y="318"/>
+                <omgdi:waypoint x="150" y="318"/>
+            </bpmndi:BPMNEdge>
             
             <!-- Stage 3: Items -->
             <bpmndi:BPMNShape id="shape_stage3MakerTask" bpmnElement="stage3MakerTask">
-                <omgdc:Bounds x="1080" y="178" width="100" height="80"/>
+                <omgdc:Bounds x="150" y="278" width="100" height="80"/>
             </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow2" bpmnElement="flow2">
+                <omgdi:waypoint x="250" y="318"/>
+                <omgdi:waypoint x="300" y="318"/>
+            </bpmndi:BPMNEdge>
+            
             <bpmndi:BPMNShape id="shape_stage3CheckerTask" bpmnElement="stage3CheckerTask">
-                <omgdc:Bounds x="1240" y="178" width="100" height="80"/>
+                <omgdc:Bounds x="300" y="278" width="100" height="80"/>
             </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow3" bpmnElement="flow3">
+                <omgdi:waypoint x="400" y="318"/>
+                <omgdi:waypoint x="445" y="318"/>
+            </bpmndi:BPMNEdge>
+            
             <bpmndi:BPMNShape id="shape_stage3Gateway" bpmnElement="stage3Gateway">
-                <omgdc:Bounds x="1400" y="193" width="50" height="50"/>
+                <omgdc:Bounds x="445" y="293" width="50" height="50"/>
             </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow4" bpmnElement="flow4">
+                <omgdi:waypoint x="495" y="318"/>
+                <omgdi:waypoint x="550" y="318"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="edge_flow5" bpmnElement="flow5">
+                <omgdi:waypoint x="470" y="293"/>
+                <omgdi:waypoint x="470" y="218"/>
+                <omgdi:waypoint x="200" y="218"/>
+                <omgdi:waypoint x="200" y="278"/>
+            </bpmndi:BPMNEdge>
+            
+            <!-- Stage 2: Plans -->
+            <bpmndi:BPMNShape id="shape_stage2MakerTask" bpmnElement="stage2MakerTask">
+                <omgdc:Bounds x="550" y="278" width="100" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow6" bpmnElement="flow6">
+                <omgdi:waypoint x="650" y="318"/>
+                <omgdi:waypoint x="695" y="318"/>
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="shape_stage2MakerGateway" bpmnElement="stage2MakerGateway">
+                <omgdc:Bounds x="695" y="293" width="50" height="50"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow7" bpmnElement="flow7">
+                <omgdi:waypoint x="745" y="318"/>
+                <omgdi:waypoint x="800" y="318"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="edge_flow8" bpmnElement="flow8">
+                <omgdi:waypoint x="720" y="293"/>
+                <omgdi:waypoint x="720" y="168"/>
+                <omgdi:waypoint x="200" y="168"/>
+                <omgdi:waypoint x="200" y="278"/>
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="shape_stage2CheckerTask" bpmnElement="stage2CheckerTask">
+                <omgdc:Bounds x="800" y="278" width="100" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow9" bpmnElement="flow9">
+                <omgdi:waypoint x="900" y="318"/>
+                <omgdi:waypoint x="945" y="318"/>
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="shape_stage2CheckerGateway" bpmnElement="stage2CheckerGateway">
+                <omgdc:Bounds x="945" y="293" width="50" height="50"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow10" bpmnElement="flow10">
+                <omgdi:waypoint x="995" y="318"/>
+                <omgdi:waypoint x="1050" y="318"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="edge_flow11" bpmnElement="flow11">
+                <omgdi:waypoint x="970" y="343"/>
+                <omgdi:waypoint x="970" y="408"/>
+                <omgdi:waypoint x="600" y="408"/>
+                <omgdi:waypoint x="600" y="358"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="edge_flow12" bpmnElement="flow12">
+                <omgdi:waypoint x="970" y="293"/>
+                <omgdi:waypoint x="970" y="168"/>
+                <omgdi:waypoint x="200" y="168"/>
+                <omgdi:waypoint x="200" y="278"/>
+            </bpmndi:BPMNEdge>
+            
+            <!-- Stage 1: Products -->
+            <bpmndi:BPMNShape id="shape_stage1MakerTask" bpmnElement="stage1MakerTask">
+                <omgdc:Bounds x="1050" y="278" width="100" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow13" bpmnElement="flow13">
+                <omgdi:waypoint x="1150" y="318"/>
+                <omgdi:waypoint x="1195" y="318"/>
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="shape_stage1MakerGateway" bpmnElement="stage1MakerGateway">
+                <omgdc:Bounds x="1195" y="293" width="50" height="50"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow14" bpmnElement="flow14">
+                <omgdi:waypoint x="1245" y="318"/>
+                <omgdi:waypoint x="1300" y="318"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="edge_flow15" bpmnElement="flow15">
+                <omgdi:waypoint x="1220" y="293"/>
+                <omgdi:waypoint x="1220" y="118"/>
+                <omgdi:waypoint x="600" y="118"/>
+                <omgdi:waypoint x="600" y="278"/>
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="shape_stage1CheckerTask" bpmnElement="stage1CheckerTask">
+                <omgdc:Bounds x="1300" y="278" width="100" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow16" bpmnElement="flow16">
+                <omgdi:waypoint x="1400" y="318"/>
+                <omgdi:waypoint x="1445" y="318"/>
+            </bpmndi:BPMNEdge>
+            
+            <bpmndi:BPMNShape id="shape_stage1CheckerGateway" bpmnElement="stage1CheckerGateway">
+                <omgdc:Bounds x="1445" y="293" width="50" height="50"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow17" bpmnElement="flow17">
+                <omgdi:waypoint x="1495" y="318"/>
+                <omgdi:waypoint x="1550" y="318"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="edge_flow18" bpmnElement="flow18">
+                <omgdi:waypoint x="1470" y="343"/>
+                <omgdi:waypoint x="1470" y="458"/>
+                <omgdi:waypoint x="1100" y="458"/>
+                <omgdi:waypoint x="1100" y="358"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="edge_flow19" bpmnElement="flow19">
+                <omgdi:waypoint x="1470" y="293"/>
+                <omgdi:waypoint x="1470" y="118"/>
+                <omgdi:waypoint x="600" y="118"/>
+                <omgdi:waypoint x="600" y="278"/>
+            </bpmndi:BPMNEdge>
+            
+            <!-- Migration Task -->
+            <bpmndi:BPMNShape id="shape_migrationTask" bpmnElement="migrationTask">
+                <omgdc:Bounds x="1550" y="278" width="100" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="edge_flow20" bpmnElement="flow20">
+                <omgdi:waypoint x="1650" y="318"/>
+                <omgdi:waypoint x="1714" y="318"/>
+            </bpmndi:BPMNEdge>
             
             <!-- End Event -->
             <bpmndi:BPMNShape id="shape_endEventApproved" bpmnElement="endEventApproved">
-                <omgdc:Bounds x="1520" y="200" width="36" height="36"/>
+                <omgdc:Bounds x="1714" y="300" width="36" height="36"/>
             </bpmndi:BPMNShape>
-            
-            <!-- Edges -->
-            <bpmndi:BPMNEdge id="edge_flow1" bpmnElement="flow1">
-                <omgdi:waypoint x="136" y="218"/>
-                <omgdi:waypoint x="200" y="218"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow2" bpmnElement="flow2">
-                <omgdi:waypoint x="300" y="218"/>
-                <omgdi:waypoint x="360" y="218"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow3" bpmnElement="flow3">
-                <omgdi:waypoint x="460" y="218"/>
-                <omgdi:waypoint x="520" y="218"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow4" bpmnElement="flow4">
-                <omgdi:waypoint x="570" y="218"/>
-                <omgdi:waypoint x="640" y="218"/>
-            </bpmndi:BPMNEdge>
-            <!-- Stage 1 Rejection Loop Back -->
-            <bpmndi:BPMNEdge id="edge_flow5" bpmnElement="flow5">
-                <omgdi:waypoint x="545" y="243"/>
-                <omgdi:waypoint x="545" y="320"/>
-                <omgdi:waypoint x="250" y="320"/>
-                <omgdi:waypoint x="250" y="258"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow6" bpmnElement="flow6">
-                <omgdi:waypoint x="740" y="218"/>
-                <omgdi:waypoint x="800" y="218"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow7" bpmnElement="flow7">
-                <omgdi:waypoint x="900" y="218"/>
-                <omgdi:waypoint x="960" y="218"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow8" bpmnElement="flow8">
-                <omgdi:waypoint x="1010" y="218"/>
-                <omgdi:waypoint x="1080" y="218"/>
-            </bpmndi:BPMNEdge>
-            <!-- Stage 2 Rejection Loop Back -->
-            <bpmndi:BPMNEdge id="edge_flow9" bpmnElement="flow9">
-                <omgdi:waypoint x="985" y="243"/>
-                <omgdi:waypoint x="985" y="350"/>
-                <omgdi:waypoint x="690" y="350"/>
-                <omgdi:waypoint x="690" y="258"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow10" bpmnElement="flow10">
-                <omgdi:waypoint x="1180" y="218"/>
-                <omgdi:waypoint x="1240" y="218"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow11" bpmnElement="flow11">
-                <omgdi:waypoint x="1340" y="218"/>
-                <omgdi:waypoint x="1400" y="218"/>
-            </bpmndi:BPMNEdge>
-            <bpmndi:BPMNEdge id="edge_flow12" bpmnElement="flow12">
-                <omgdi:waypoint x="1450" y="218"/>
-                <omgdi:waypoint x="1520" y="218"/>
-            </bpmndi:BPMNEdge>
-            <!-- Stage 3 Rejection Loop Back -->
-            <bpmndi:BPMNEdge id="edge_flow13" bpmnElement="flow13">
-                <omgdi:waypoint x="1425" y="243"/>
-                <omgdi:waypoint x="1425" y="380"/>
-                <omgdi:waypoint x="1130" y="380"/>
-                <omgdi:waypoint x="1130" y="258"/>
-            </bpmndi:BPMNEdge>
             
         </bpmndi:BPMNPlane>
     </bpmndi:BPMNDiagram>

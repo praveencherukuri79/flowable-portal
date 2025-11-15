@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -12,106 +12,164 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField
+  Checkbox,
+  Chip
 } from '@mui/material'
 import { useLocation, useNavigate } from 'react-router-dom'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import CancelIcon from '@mui/icons-material/Cancel'
-import { flowableApi, dataQueryApi, Item } from '../../api/flowableApi'
+import { flowableApi, dataQueryApi } from '../../api/flowableApi'
+import { stagingApi, ItemStaging } from '../../api/stagingApi'
+import { useRecoilValue } from 'recoil'
+import { authState } from '../../state/auth'
 
 export function ItemApproval() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { taskId, processInstanceId } = location.state || {}
+  const { taskId, processInstanceId, formKey } = location.state || {}
+  const auth = useRecoilValue(authState)
 
-  const [items, setItems] = useState<Item[]>([])
+  const [items, setItems] = useState<ItemStaging[]>([])
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [sheetId, setSheetId] = useState<string>('')
-  const [comments, setComments] = useState('')
+  const [allRowsApproved, setAllRowsApproved] = useState(false)
+  const [sheetApproved, setSheetApproved] = useState(false)
 
   // Check access - must come from formKey navigation
   useEffect(() => {
-    if (!taskId || !processInstanceId) {
+    if (!taskId || !processInstanceId || !formKey) {
       setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to Pending Approvals and claim a task first.')
       setTimeout(() => navigate('/checker'), 3000)
       return
     }
-    loadTaskVariables()
-  }, [taskId, processInstanceId, navigate])
+    loadApprovalData()
+  }, [taskId, processInstanceId, formKey, navigate])
 
-  useEffect(() => {
-    if (sheetId) {
-      loadItems()
-    }
-  }, [sheetId])
-
-  const loadTaskVariables = async () => {
+  const loadApprovalData = async () => {
     try {
       setLoading(true)
-      const response = await flowableApi.getTaskVariables(taskId)
-      const sid = response.sheetId as string
-      setSheetId(sid)
-    } catch (err) {
-      setError('Failed to load task details')
-      console.error('Error:', err)
+      
+      // Single API call gets everything: sheetId, items, and sheet status
+      const data = await dataQueryApi.getApprovalData(processInstanceId, 'item')
+      
+      setSheetId(data.sheetId)
+      setItems(data.items || [])
+      setSheetApproved(!!data.sheet.approvedAt)
+      
+      // Check if all rows are approved
+      const allApproved = data.items && data.items.length > 0 && data.items.every(i => i.approved === true)
+      setAllRowsApproved(!!allApproved)
+      
+      console.log('✓ Loaded approval data:', data)
+      
+    } catch (err: any) {
+      console.error('Failed to load approval data:', err)
+      setError('Failed to load data: ' + (err.response?.data?.message || err.message || 'Unknown error'))
     } finally {
       setLoading(false)
     }
   }
 
-  const loadItems = async () => {
+  const loadItems = async (sid: string) => {
+    // Reload data after approvals
     try {
-      setLoading(true)
-      const data = await dataQueryApi.getItemsBySheet(sheetId)
+      const data = await stagingApi.getItemsStaging(sid)
       setItems(data)
+      
+      // Check if all rows are approved
+      const allApproved = data.length > 0 && data.every(i => i.approved === true)
+      setAllRowsApproved(allApproved)
+      
+      // Load sheet status
+      const sheet = await stagingApi.getSheet(sid)
+      setSheetApproved(!!sheet.approvedAt)
     } catch (err) {
-      setError('Failed to load items')
-      console.error('Error:', err)
+      console.error('Failed to reload items:', err)
+    }
+  }
+
+  const handleToggleItem = (id: number) => {
+    const newSelected = new Set(selectedItems)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedItems(newSelected)
+  }
+
+  const handleApproveSelected = async () => {
+    try {
+      setLoading(true)
+      const approverUsername = auth.username || 'checker'
+      
+      // Approve each selected item individually
+      for (const id of selectedItems) {
+        await stagingApi.approveItemIndividual(id, approverUsername)
+      }
+
+      setSuccessMessage(`Approved ${selectedItems.size} item(s) individually`)
+      setSelectedItems(new Set())
+      await loadItems(sheetId) // Reload to show updated status
+    } catch (err: any) {
+      setError('Failed to approve items: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleApprove = async () => {
+  const handleApproveAll = async () => {
     try {
-      await flowableApi.completeTask(taskId, {
-        checkerComments: comments,
-        checkerDecision: 'APPROVE',
-        approved: true,
-        stage3Decision: 'APPROVE'
-      })
-      setSuccessMessage('Items approved successfully')
+      setLoading(true)
+      const approverUsername = auth.username || 'checker'
+      
+      // Bulk approve all items for this sheet
+      await stagingApi.approveItemsBulk(sheetId, approverUsername)
+
+      setSuccessMessage('All items approved in bulk')
+      await loadItems(sheetId) // Reload to show updated status
+    } catch (err: any) {
+      setError('Failed to bulk approve: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleApproveSheet = async () => {
+    try {
+      setLoading(true)
+      const approverUsername = auth.username || 'checker'
+      
+      // Backend will approve sheet AND complete task
+      await stagingApi.approveSheet(sheetId, approverUsername, taskId, 'stage3Decision')
+      
+      setSuccessMessage('Sheet approved and task completed! Redirecting...')
       setTimeout(() => navigate('/checker'), 2000)
-    } catch (err) {
-      setError('Failed to approve items')
-      console.error('Error:', err)
+    } catch (err: any) {
+      setError('Failed to approve and complete: ' + err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleReject = async () => {
-    if (!comments.trim()) {
-      setError('Please provide rejection comments')
-      return
-    }
-
     try {
+      setLoading(true)
+      // Complete task with reject decision (sends back to maker)
       await flowableApi.completeTask(taskId, {
-        checkerComments: comments,
-        checkerDecision: 'REJECT',
-        approved: false,
         stage3Decision: 'REJECT'
       })
-      setSuccessMessage('Items rejected successfully')
+      setSuccessMessage('Items rejected! Sending back to maker...')
       setTimeout(() => navigate('/checker'), 2000)
-    } catch (err) {
-      setError('Failed to reject items')
-      console.error('Error:', err)
+    } catch (err: any) {
+      setError('Failed to reject: ' + err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (!taskId || !processInstanceId) {
+  if (!taskId || !processInstanceId || !formKey) {
     return (
       <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
@@ -137,100 +195,139 @@ export function ItemApproval() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Approve Items - Stage 3
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
-          {successMessage}
-        </Alert>
-      )}
+      <Paper sx={{ p: 3 }}>
+        <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Stage 3: Approve Items (First Stage)
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sheet ID: {sheetId}
+            </Typography>
+          </Box>
+          {/* No back button for Items - it's the first stage */}
+        </Box>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          Sheet ID: {sheetId}
-        </Typography>
-      </Paper>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
 
-      <TableContainer component={Paper} sx={{ mb: 3 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Item Code</TableCell>
-              <TableCell>Item Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Edited By</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {items.length === 0 ? (
+        <Box mb={2} display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            onClick={handleApproveSelected}
+            disabled={selectedItems.size === 0 || loading}
+          >
+            Approve Selected ({selectedItems.size})
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleApproveAll}
+            disabled={loading}
+          >
+            Approve All
+          </Button>
+        </Box>
+
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5} align="center">
-                  No items found
+                <TableCell padding="checkbox">
+                  <Checkbox 
+                    checked={selectedItems.size === items.length && items.length > 0}
+                    onChange={() => {
+                      if (selectedItems.size === items.length) {
+                        setSelectedItems(new Set())
+                      } else {
+                        setSelectedItems(new Set(items.map(i => i.id!)))
+                      }
+                    }}
+                  />
                 </TableCell>
+                <TableCell>Item Name</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Price</TableCell>
+                <TableCell>Quantity</TableCell>
+                <TableCell>Effective Date</TableCell>
+                <TableCell>Approval Status</TableCell>
               </TableRow>
-            ) : (
-              items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.itemCode}</TableCell>
-                  <TableCell>{item.itemName}</TableCell>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>{item.status}</TableCell>
-                  <TableCell>{item.editedBy}</TableCell>
+            </TableHead>
+            <TableBody>
+              {items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <Typography color="text.secondary">
+                      No items to approve
+                    </Typography>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                items.filter(item => item.id !== undefined).map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedItems.has(item.id as number)}
+                        onChange={() => handleToggleItem(item.id as number)}
+                      />
+                    </TableCell>
+                    <TableCell>{item.itemName || 'N/A'}</TableCell>
+                    <TableCell>{item.itemCategory || 'N/A'}</TableCell>
+                    <TableCell>${(item.price || 0).toFixed(2)}</TableCell>
+                    <TableCell>{item.quantity || 0}</TableCell>
+                    <TableCell>{item.effectiveDate || 'N/A'}</TableCell>
+                    <TableCell>
+                      {item.approved ? (
+                        <Chip 
+                          label={`Approved by ${item.approvedBy || 'N/A'}`} 
+                          color="success" 
+                          size="small" 
+                        />
+                      ) : (
+                        <Chip label="Pending" color="default" size="small" />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          label="Checker Comments"
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
-          multiline
-          rows={4}
-          placeholder="Add your comments (required for rejection)"
-        />
+        <Box mt={3} display="flex" gap={2} flexDirection="column">
+          {/* Row Approval Status */}
+          {allRowsApproved && !sheetApproved && (
+            <Alert severity="info">
+              ✅ All rows are approved! You can now approve the entire sheet.
+            </Alert>
+          )}
+          {sheetApproved && (
+            <Alert severity="success">
+              ✅ Sheet has been approved and task completed!
+            </Alert>
+          )}
+          
+          {/* Action Buttons */}
+          <Box display="flex" gap={2}>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleReject}
+              disabled={loading}
+            >
+              Reject Items (Send Back to Maker)
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleApproveSheet}
+              disabled={loading || !allRowsApproved}
+            >
+              Approve Sheet & Complete Task
+            </Button>
+          </Box>
+        </Box>
       </Paper>
-
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <Button
-          variant="contained"
-          color="success"
-          startIcon={<CheckCircleIcon />}
-          onClick={handleApprove}
-          disabled={loading}
-        >
-          Approve
-        </Button>
-        <Button
-          variant="contained"
-          color="error"
-          startIcon={<CancelIcon />}
-          onClick={handleReject}
-          disabled={loading || !comments.trim()}
-        >
-          Reject
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => navigate('/checker')}
-        >
-          Cancel
-        </Button>
-      </Box>
     </Box>
   )
 }
-

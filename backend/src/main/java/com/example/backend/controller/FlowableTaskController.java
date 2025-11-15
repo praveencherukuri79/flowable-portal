@@ -88,6 +88,18 @@ public class FlowableTaskController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/assign/{taskId}")
+    @Operation(summary = "Assign task", description = "Assign a task to a specific user (admin only)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TaskActionResponse> assignTask(
+            @PathVariable String taskId,
+            @RequestParam String user,
+            Principal principal
+    ) {
+        TaskActionResponse response = taskManagementService.reassignTask(taskId, user, principal.getName());
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/reassign/{taskId}")
     @Operation(summary = "Reassign task", description = "Reassign a task to a different user")
     @ApiResponses(value = {

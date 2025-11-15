@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
   Button,
   Paper,
   Alert,
-  CircularProgress,
   IconButton,
   TextField,
   Table,
@@ -17,86 +16,106 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Chip
 } from '@mui/material'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SaveIcon from '@mui/icons-material/Save'
-import { flowableApi, dataQueryApi, Plan } from '../../api/flowableApi'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { flowableApi, dataQueryApi } from '../../api/flowableApi'
+import { PlanStaging } from '../../api/stagingApi'
+import dayjs from 'dayjs'
 
 export function PlanEdit() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { taskId, processInstanceId } = location.state || {}
+  const { taskId, processInstanceId, formKey } = location.state || {}
 
-  const [plans, setPlans] = useState<Plan[]>([])
+  const [plans, setPlans] = useState<PlanStaging[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
-  const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
-  const [sheetId, setSheetId] = useState<string>('')
+  const [editingPlan, setEditingPlan] = useState<PlanStaging | null>(null)
+  const [existingSheetId, setExistingSheetId] = useState<string | null>(null)
 
-  const [planCode, setPlanCode] = useState('')
+  // Form fields
   const [planName, setPlanName] = useState('')
-  const [description, setDescription] = useState('')
+  const [planType, setPlanType] = useState('')
+  const [premium, setPremium] = useState<number>(0)
+  const [coverageAmount, setCoverageAmount] = useState<number>(0)
+  const [effectiveDate, setEffectiveDate] = useState(dayjs().format('YYYY-MM-DD'))
 
   // Check access - must come from formKey navigation
   useEffect(() => {
-    if (!taskId || !processInstanceId) {
+    if (!taskId || !processInstanceId || !formKey) {
       setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to My Tasks and claim a task first.')
       setTimeout(() => navigate('/maker'), 3000)
       return
     }
-    loadTaskVariables()
-  }, [taskId, processInstanceId, navigate])
-
-  useEffect(() => {
-    if (sheetId) {
-      loadPlans()
-    }
-  }, [sheetId])
-
-  const loadTaskVariables = async () => {
-    try {
-      setLoading(true)
-      const response = await flowableApi.getTaskVariables(taskId)
-      const sid = response.sheetId as string
-      setSheetId(sid)
-    } catch (err) {
-      setError('Failed to load task details')
-      console.error('Error:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    // Check if sheetId already exists for this task
+    loadPlans()
+  }, [taskId, processInstanceId, formKey, navigate])
 
   const loadPlans = async () => {
     try {
       setLoading(true)
-      const data = await dataQueryApi.getPlansBySheet(sheetId)
-      setPlans(data)
-    } catch (err) {
-      setError('Failed to load plans')
-      console.error('Error:', err)
+      
+      // Single API call - backend checks Sheet table and returns staging if exists, else master
+      const data = await dataQueryApi.getMakerData(processInstanceId, 'plan')
+      
+      if (data.isExistingSheet) {
+        // Sheet exists - load existing staging data (rejection/back navigation case)
+        console.log('Loading existing staging data for sheetId:', data.sheetId)
+        setExistingSheetId(data.sheetId || '')
+        setPlans(data.plans || [])
+        if (data.plans && data.plans.length > 0) {
+          setSuccessMessage('ℹ️ Loaded existing data. You can edit and resubmit.')
+        }
+      } else {
+        // No sheet exists - load fresh data from MASTER
+        console.log('No existing sheet found. Loading MASTER data.')
+        const masterData = data.plans || []
+        
+        // Convert to staging format for editing (sheetId will be created by TaskListener)
+        const stagingPlans: PlanStaging[] = masterData.map((plan: any) => ({
+          sheetId: '', // Will be set by backend TaskListener
+          planName: plan.planName || '',
+          planType: plan.planType || '',
+          premium: plan.premium || 0,
+          coverageAmount: plan.coverageAmount || 0,
+          effectiveDate: plan.effectiveDate || '',
+          status: 'PENDING'
+        }))
+        setPlans(stagingPlans)
+      }
+    } catch (err: any) {
+      console.error('Failed to load plans:', err)
+      setError('Failed to load plans: ' + (err.message || 'Unknown error'))
+      setPlans([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleOpenDialog = (plan?: Plan) => {
+  const handleOpenDialog = (plan?: PlanStaging) => {
     if (plan) {
       setEditingPlan(plan)
-      setPlanCode(plan.planCode)
       setPlanName(plan.planName)
-      setDescription(plan.description || '')
+      setPlanType(plan.planType)
+      setPremium(plan.premium)
+      setCoverageAmount(plan.coverageAmount)
+      setEffectiveDate(plan.effectiveDate)
     } else {
       setEditingPlan(null)
-      setPlanCode('')
       setPlanName('')
-      setDescription('')
+      setPlanType('')
+      setPremium(0)
+      setCoverageAmount(0)
+      setEffectiveDate(dayjs().format('YYYY-MM-DD'))
     }
     setOpenDialog(true)
   }
@@ -104,65 +123,89 @@ export function PlanEdit() {
   const handleCloseDialog = () => {
     setOpenDialog(false)
     setEditingPlan(null)
-    setPlanCode('')
-    setPlanName('')
-    setDescription('')
   }
 
-  const handleSave = async () => {
+  const handleSavePlan = () => {
+    const newPlan: PlanStaging = {
+      sheetId: '', // Will be set by backend TaskListener
+      planName,
+      planType,
+      premium,
+      coverageAmount,
+      effectiveDate,
+      status: 'PENDING'
+    }
+
+    if (editingPlan) {
+      setPlans(plans.map(p => p === editingPlan ? newPlan : p))
+    } else {
+      setPlans([...plans, newPlan])
+    }
+
+    handleCloseDialog()
+    setSuccessMessage('Plan saved locally. Click "Submit Plans" to save.')
+  }
+
+  const handleDeletePlan = (plan: PlanStaging) => {
+    setPlans(plans.filter(p => p !== plan))
+    setSuccessMessage('Plan removed locally. Click "Submit Plans" to save.')
+  }
+
+  const handleBack = async () => {
     try {
-      const planData: Plan = {
-        sheetId,
-        planCode,
-        planName,
-        description,
-        status: 'PENDING'
-      }
-
-      // Add to local state (will be saved by task listener on complete)
-      if (editingPlan?.id) {
-        setPlans(plans.map(p => p.id === editingPlan.id ? { ...planData, id: editingPlan.id } : p))
-        setSuccessMessage('Plan updated')
-      } else {
-        setPlans([...plans, { ...planData, id: Date.now() }]) // Temp ID
-        setSuccessMessage('Plan added')
-      }
-
-      handleCloseDialog()
-    } catch (err) {
-      setError('Failed to save plan')
-      console.error('Error:', err)
-    }
-  }
-
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this plan?')) {
-      setPlans(plans.filter(p => p.id !== id))
-      setSuccessMessage('Plan removed')
-    }
-  }
-
-  const handleComplete = async () => {
-    if (plans.length === 0) {
-      setError('Please add at least one plan before completing')
-      return
-    }
-
-    try {
-      // Pass plans as generic data - task listener will save to DB
-      await flowableApi.completeTask(taskId, { 
-        sheetId,
-        plans: plans
+      setLoading(true)
+      
+      // Navigation only - don't send plans data
+      await flowableApi.completeTask(taskId, {
+        stage2Decision: 'BACK'
       })
-      setSuccessMessage('Task completed successfully')
+      setSuccessMessage('Going back to Items...')
       setTimeout(() => navigate('/maker'), 2000)
-    } catch (err) {
-      setError('Failed to complete task')
-      console.error('Error:', err)
+    } catch (err: any) {
+      setError('Failed to go back: ' + (err.response?.data?.message || err.message))
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (!taskId || !processInstanceId) {
+  const handleCompleteTask = async () => {
+    try {
+      if (plans.length === 0) {
+        setError('Please add at least one plan before submitting.')
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+
+      // Strip database IDs - send only business data
+      const cleanPlans = plans.map(plan => ({
+        planName: plan.planName,
+        planType: plan.planType,
+        premium: plan.premium,
+        coverageAmount: plan.coverageAmount,
+        effectiveDate: plan.effectiveDate
+      }))
+
+      // Complete task with reason and clean plans
+      // IMPORTANT: Set stage2Decision to FORWARD to override any previous BACK
+      await flowableApi.completeTask(taskId, {
+        reason: 'submit',
+        stage2Decision: 'FORWARD', // Override any previous BACK decision
+        plans: cleanPlans
+      })
+
+      setSuccessMessage('Plans submitted successfully! Redirecting...')
+      setTimeout(() => navigate('/maker'), 2000)
+    } catch (err: any) {
+      setError('Failed to submit plans: ' + (err.response?.data?.message || err.message))
+      console.error('Error completing task:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!taskId || !processInstanceId || !formKey) {
     return (
       <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
@@ -178,141 +221,162 @@ export function PlanEdit() {
     )
   }
 
-  if (loading && !sheetId) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    )
-  }
-
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Edit Plans - Stage 2
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
-          {successMessage}
-        </Alert>
-      )}
+      <Paper sx={{ p: 3 }}>
+        <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Stage 2: Edit Plans (Second Stage)
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Task ID: {taskId}
+            </Typography>
+          </Box>
+          {/* Back to previous stage button */}
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={handleBack}
+            disabled={loading}
+            sx={{ minWidth: 150 }}
+          >
+            Back to Items
+          </Button>
+        </Box>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          Sheet ID: {sheetId}
-        </Typography>
-      </Paper>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
 
-      <Box sx={{ mb: 2 }}>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Add Plan
-        </Button>
-      </Box>
+        <Box mb={2}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+          >
+            Add Plan
+          </Button>
+        </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Plan Code</TableCell>
-              <TableCell>Plan Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {plans.length === 0 ? (
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5} align="center">
-                  No plans found. Click "Add Plan" to create one.
-                </TableCell>
+                <TableCell>Plan Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Premium</TableCell>
+                <TableCell>Coverage Amount</TableCell>
+                <TableCell>Effective Date</TableCell>
+                {existingSheetId && <TableCell>Approval Status</TableCell>}
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ) : (
-              plans.map((plan) => (
-                <TableRow key={plan.id}>
-                  <TableCell>{plan.planCode}</TableCell>
-                  <TableCell>{plan.planName}</TableCell>
-                  <TableCell>{plan.description}</TableCell>
-                  <TableCell>{plan.status}</TableCell>
-                  <TableCell>
-                    <IconButton size="small" onClick={() => handleOpenDialog(plan)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(plan.id!)}>
-                      <DeleteIcon />
-                    </IconButton>
+            </TableHead>
+            <TableBody>
+              {plans.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={existingSheetId ? 7 : 6} align="center">
+                    <Typography color="text.secondary">
+                      No plans. Click "Add Plan" to start.
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                plans.map((plan, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{plan.planName}</TableCell>
+                    <TableCell>{plan.planType}</TableCell>
+                    <TableCell>${plan.premium.toFixed(2)}</TableCell>
+                    <TableCell>${plan.coverageAmount.toLocaleString()}</TableCell>
+                    <TableCell>{plan.effectiveDate}</TableCell>
+                    {existingSheetId && (
+                      <TableCell>
+                        {plan.approved ? (
+                          <Chip label={`✓ ${plan.approvedBy}`} color="success" size="small" />
+                        ) : (
+                          <Chip label="Pending" color="default" size="small" />
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <IconButton size="small" onClick={() => handleOpenDialog(plan)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDeletePlan(plan)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<SaveIcon />}
-          onClick={handleComplete}
-          disabled={loading}
-        >
-          Complete Task
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => navigate('/maker')}
-        >
-          Cancel
-        </Button>
-      </Box>
+        <Box mt={3} display="flex" gap={2}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={handleCompleteTask}
+            disabled={loading || plans.length === 0}
+          >
+            {loading ? 'Submitting...' : 'Submit Plans'}
+          </Button>
+        </Box>
+      </Paper>
 
+      {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editingPlan ? 'Edit Plan' : 'Add Plan'}</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Plan Code"
-            value={planCode}
-            onChange={(e) => setPlanCode(e.target.value)}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="Plan Name"
-            value={planName}
-            onChange={(e) => setPlanName(e.target.value)}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            margin="normal"
-            multiline
-            rows={3}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label="Plan Name"
+              value={planName}
+              onChange={(e) => setPlanName(e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Plan Type"
+              value={planType}
+              onChange={(e) => setPlanType(e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Premium"
+              type="number"
+              value={premium}
+              onChange={(e) => setPremium(Number(e.target.value))}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Coverage Amount"
+              type="number"
+              value={coverageAmount}
+              onChange={(e) => setCoverageAmount(Number(e.target.value))}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Effective Date"
+              type="date"
+              value={effectiveDate}
+              onChange={(e) => setEffectiveDate(e.target.value)}
+              fullWidth
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleSave}
+          <Button 
+            onClick={handleSavePlan} 
             variant="contained"
-            disabled={!planCode || !planName}
+            disabled={!planName || !planType || premium <= 0 || coverageAmount <= 0}
           >
             Save
           </Button>
@@ -321,4 +385,3 @@ export function PlanEdit() {
     </Box>
   )
 }
-

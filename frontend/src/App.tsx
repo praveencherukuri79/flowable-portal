@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Login } from './pages/Login'
 import { AdminPortal } from './pages/Admin/AdminPortal'
+import { DataMigration } from './pages/Admin/DataMigration'
 import { MakerPortal } from './pages/Maker/MakerPortal'
 import { CheckerPortal } from './pages/Checker/CheckerPortal'
 import { ProductEdit } from './pages/Maker/ProductEdit'
@@ -18,11 +19,22 @@ function App() {
       <Route path="/login" element={<Login />} />
       
       <Route
-        path="/admin/*"
+        path="/admin"
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <Layout>
               <AdminPortal />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/admin/data-migration"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <Layout>
+              <DataMigration />
             </Layout>
           </ProtectedRoute>
         }

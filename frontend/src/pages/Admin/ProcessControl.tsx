@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -13,10 +13,7 @@ import {
   DialogActions,
   TextField,
   Chip,
-  IconButton,
-  Divider,
-  Paper,
-  Grid
+  IconButton
 } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
@@ -25,8 +22,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import {
   processControlApi,
   ProcessDefinition,
-  ProcessInstance,
-  TaskInfo
+  ProcessInstance
 } from '../../api/processControlApi'
 import { adminApi } from '../../api/adminApi'
 import { InstanceDetailsView } from './InstanceDetailsView'

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
   Button,
   Paper,
   Alert,
-  CircularProgress,
   IconButton,
   TextField,
   Table,
@@ -17,86 +16,105 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Chip
 } from '@mui/material'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SaveIcon from '@mui/icons-material/Save'
-import { flowableApi, dataQueryApi, Item } from '../../api/flowableApi'
+import { flowableApi, dataQueryApi } from '../../api/flowableApi'
+import { ItemStaging } from '../../api/stagingApi'
+import dayjs from 'dayjs'
 
 export function ItemEdit() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { taskId, processInstanceId } = location.state || {}
+  const { taskId, processInstanceId, formKey } = location.state || {}
 
-  const [items, setItems] = useState<Item[]>([])
+  const [items, setItems] = useState<ItemStaging[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
-  const [editingItem, setEditingItem] = useState<Item | null>(null)
-  const [sheetId, setSheetId] = useState<string>('')
+  const [editingItem, setEditingItem] = useState<ItemStaging | null>(null)
+  const [existingSheetId, setExistingSheetId] = useState<string | null>(null)
 
-  const [itemCode, setItemCode] = useState('')
+  // Form fields
   const [itemName, setItemName] = useState('')
-  const [description, setDescription] = useState('')
+  const [itemCategory, setItemCategory] = useState('')
+  const [price, setPrice] = useState<number>(0)
+  const [quantity, setQuantity] = useState<number>(0)
+  const [effectiveDate, setEffectiveDate] = useState(dayjs().format('YYYY-MM-DD'))
 
   // Check access - must come from formKey navigation
   useEffect(() => {
-    if (!taskId || !processInstanceId) {
+    if (!taskId || !processInstanceId || !formKey) {
       setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to My Tasks and claim a task first.')
       setTimeout(() => navigate('/maker'), 3000)
       return
     }
-    loadTaskVariables()
-  }, [taskId, processInstanceId, navigate])
-
-  useEffect(() => {
-    if (sheetId) {
-      loadItems()
-    }
-  }, [sheetId])
-
-  const loadTaskVariables = async () => {
-    try {
-      setLoading(true)
-      const response = await flowableApi.getTaskVariables(taskId)
-      const sid = response.sheetId as string
-      setSheetId(sid)
-    } catch (err) {
-      setError('Failed to load task details')
-      console.error('Error:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    // Check if sheetId already exists for this task
+    loadItems()
+  }, [taskId, processInstanceId, formKey, navigate])
 
   const loadItems = async () => {
     try {
       setLoading(true)
-      const data = await dataQueryApi.getItemsBySheet(sheetId)
-      setItems(data)
-    } catch (err) {
-      setError('Failed to load items')
-      console.error('Error:', err)
+      
+      // Single API call - backend checks Sheet table and returns staging if exists, else master
+      const data = await dataQueryApi.getMakerData(processInstanceId, 'item')
+      
+      if (data.isExistingSheet) {
+        // Sheet exists - load existing staging data (rejection/back navigation case)
+        console.log('Loading existing staging data for sheetId:', data.sheetId)
+        setExistingSheetId(data.sheetId || '')
+        setItems(data.items || [])
+        if (data.items && data.items.length > 0) {
+          setSuccessMessage('ℹ️ Loaded existing data. You can edit and resubmit.')
+        }
+      } else {
+        // No sheet exists - load fresh data from MASTER
+        console.log('No existing sheet found. Loading MASTER data.')
+        const masterData = data.items || []
+        
+        // Convert to staging format for editing (sheetId will be created by TaskListener)
+        const stagingItems: ItemStaging[] = masterData.map((item: any) => ({
+          sheetId: '', // Will be set by backend TaskListener
+          itemName: item.itemName || '',
+          itemCategory: item.itemCategory || '',
+          price: item.price || 0,
+          quantity: item.quantity || 0,
+          effectiveDate: item.effectiveDate || '',
+          status: 'PENDING'
+        }))
+        setItems(stagingItems)
+      }
+    } catch (err: any) {
+      console.error('Failed to load items:', err)
+      setError('Failed to load items: ' + (err.message || 'Unknown error'))
+      setItems([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleOpenDialog = (item?: Item) => {
+  const handleOpenDialog = (item?: ItemStaging) => {
     if (item) {
       setEditingItem(item)
-      setItemCode(item.itemCode)
       setItemName(item.itemName)
-      setDescription(item.description || '')
+      setItemCategory(item.itemCategory)
+      setPrice(item.price)
+      setQuantity(item.quantity)
+      setEffectiveDate(item.effectiveDate)
     } else {
       setEditingItem(null)
-      setItemCode('')
       setItemName('')
-      setDescription('')
+      setItemCategory('')
+      setPrice(0)
+      setQuantity(0)
+      setEffectiveDate(dayjs().format('YYYY-MM-DD'))
     }
     setOpenDialog(true)
   }
@@ -104,65 +122,74 @@ export function ItemEdit() {
   const handleCloseDialog = () => {
     setOpenDialog(false)
     setEditingItem(null)
-    setItemCode('')
-    setItemName('')
-    setDescription('')
   }
 
-  const handleSave = async () => {
+  const handleSaveItem = () => {
+    const newItem: ItemStaging = {
+      sheetId: '', // Will be set by backend TaskListener
+      itemName,
+      itemCategory,
+      price,
+      quantity,
+      effectiveDate,
+      status: 'PENDING'
+    }
+
+    if (editingItem) {
+      // Update existing
+      setItems(items.map(i => 
+        i === editingItem ? newItem : i
+      ))
+    } else {
+      // Add new
+      setItems([...items, newItem])
+    }
+
+    handleCloseDialog()
+    setSuccessMessage('Item saved locally. Click "Submit Items" to save.')
+  }
+
+  const handleDeleteItem = (item: ItemStaging) => {
+    setItems(items.filter(i => i !== item))
+    setSuccessMessage('Item removed locally. Click "Submit Items" to save.')
+  }
+
+  const handleCompleteTask = async () => {
     try {
-      const itemData: Item = {
-        sheetId,
-        itemCode,
-        itemName,
-        description,
-        status: 'PENDING'
+      if (items.length === 0) {
+        setError('Please add at least one item before submitting.')
+        return
       }
 
-      // Add to local state (will be saved by task listener on complete)
-      if (editingItem?.id) {
-        setItems(items.map(i => i.id === editingItem.id ? { ...itemData, id: editingItem.id } : i))
-        setSuccessMessage('Item updated')
-      } else {
-        setItems([...items, { ...itemData, id: Date.now() }]) // Temp ID
-        setSuccessMessage('Item added')
-      }
+      setLoading(true)
+      setError(null)
 
-      handleCloseDialog()
-    } catch (err) {
-      setError('Failed to save item')
-      console.error('Error:', err)
-    }
-  }
+      // Strip database IDs - send only business data
+      const cleanItems = items.map(item => ({
+        itemName: item.itemName,
+        itemCategory: item.itemCategory,
+        price: item.price,
+        quantity: item.quantity,
+        effectiveDate: item.effectiveDate
+      }))
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      setItems(items.filter(i => i.id !== id))
-      setSuccessMessage('Item removed')
-    }
-  }
-
-  const handleComplete = async () => {
-    if (items.length === 0) {
-      setError('Please add at least one item before completing')
-      return
-    }
-
-    try {
-      // Pass items as generic data - task listener will save to DB
-      await flowableApi.completeTask(taskId, { 
-        sheetId,
-        items: items
+      // Complete task with reason and clean items
+      await flowableApi.completeTask(taskId, {
+        reason: 'submit',
+        items: cleanItems
       })
-      setSuccessMessage('Task completed successfully')
+
+      setSuccessMessage('Items submitted successfully! Redirecting...')
       setTimeout(() => navigate('/maker'), 2000)
-    } catch (err) {
-      setError('Failed to complete task')
-      console.error('Error:', err)
+    } catch (err: any) {
+      setError('Failed to submit items: ' + (err.response?.data?.message || err.message))
+      console.error('Error completing task:', err)
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (!taskId || !processInstanceId) {
+  if (!taskId || !processInstanceId || !formKey) {
     return (
       <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
@@ -178,141 +205,153 @@ export function ItemEdit() {
     )
   }
 
-  if (loading && !sheetId) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    )
-  }
-
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Edit Items - Stage 3
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
-          {successMessage}
-        </Alert>
-      )}
+      <Paper sx={{ p: 3 }}>
+        <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Stage 3: Edit Items (First Stage)
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Task ID: {taskId}
+            </Typography>
+          </Box>
+          {/* No back button - it's the first stage */}
+        </Box>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          Sheet ID: {sheetId}
-        </Typography>
-      </Paper>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
 
-      <Box sx={{ mb: 2 }}>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Add Item
-        </Button>
-      </Box>
+        <Box mb={2}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+          >
+            Add Item
+          </Button>
+        </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Item Code</TableCell>
-              <TableCell>Item Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {items.length === 0 ? (
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5} align="center">
-                  No items found. Click "Add Item" to create one.
-                </TableCell>
+                <TableCell>Item Name</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Price</TableCell>
+                <TableCell>Quantity</TableCell>
+                <TableCell>Effective Date</TableCell>
+                {existingSheetId && <TableCell>Approval Status</TableCell>}
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ) : (
-              items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.itemCode}</TableCell>
-                  <TableCell>{item.itemName}</TableCell>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>{item.status}</TableCell>
-                  <TableCell>
-                    <IconButton size="small" onClick={() => handleOpenDialog(item)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(item.id!)}>
-                      <DeleteIcon />
-                    </IconButton>
+            </TableHead>
+            <TableBody>
+              {items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={existingSheetId ? 7 : 6} align="center">
+                    <Typography color="text.secondary">
+                      No items. Click "Add Item" to start.
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                items.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{item.itemName}</TableCell>
+                    <TableCell>{item.itemCategory}</TableCell>
+                    <TableCell>${item.price.toFixed(2)}</TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{item.effectiveDate}</TableCell>
+                    {existingSheetId && (
+                      <TableCell>
+                        {item.approved ? (
+                          <Chip label={`✓ ${item.approvedBy}`} color="success" size="small" />
+                        ) : (
+                          <Chip label="Pending" color="default" size="small" />
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <IconButton size="small" onClick={() => handleOpenDialog(item)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDeleteItem(item)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<SaveIcon />}
-          onClick={handleComplete}
-          disabled={loading}
-        >
-          Complete Task
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => navigate('/maker')}
-        >
-          Cancel
-        </Button>
-      </Box>
+        <Box mt={3} display="flex" gap={2}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={handleCompleteTask}
+            disabled={loading || items.length === 0}
+          >
+            {loading ? 'Submitting...' : 'Submit Items'}
+          </Button>
+        </Box>
+      </Paper>
 
+      {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editingItem ? 'Edit Item' : 'Add Item'}</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Item Code"
-            value={itemCode}
-            onChange={(e) => setItemCode(e.target.value)}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="Item Name"
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            margin="normal"
-            multiline
-            rows={3}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label="Item Name"
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Category"
+              value={itemCategory}
+              onChange={(e) => setItemCategory(e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Price"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(Number(e.target.value))}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Quantity"
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Effective Date"
+              type="date"
+              value={effectiveDate}
+              onChange={(e) => setEffectiveDate(e.target.value)}
+              fullWidth
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleSave}
+          <Button 
+            onClick={handleSaveItem} 
             variant="contained"
-            disabled={!itemCode || !itemName}
+            disabled={!itemName || !itemCategory || price <= 0 || quantity <= 0}
           >
             Save
           </Button>
@@ -321,4 +360,3 @@ export function ItemEdit() {
     </Box>
   )
 }
-

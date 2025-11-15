@@ -5,7 +5,6 @@ import {
   Button,
   Paper,
   Alert,
-  CircularProgress,
   IconButton,
   TextField,
   Table,
@@ -17,109 +16,102 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Chip
 } from '@mui/material'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SaveIcon from '@mui/icons-material/Save'
-import { flowableApi, dataQueryApi, Product } from '../../api/flowableApi'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { flowableApi, dataQueryApi } from '../../api/flowableApi'
+import { ProductStaging } from '../../api/stagingApi'
 import dayjs from 'dayjs'
 
 export function ProductEdit() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { taskId, processInstanceId } = location.state || {}
-  const [products, setProducts] = useState<Product[]>([])
+  const { taskId, processInstanceId, formKey } = location.state || {}
+
+  const [products, setProducts] = useState<ProductStaging[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [sheetId, setSheetId] = useState<string>('')
-  const [rejectionComments, setRejectionComments] = useState<string>('')
-  const [makerResponse, setMakerResponse] = useState<string>('')
+  const [editingProduct, setEditingProduct] = useState<ProductStaging | null>(null)
+  const [existingSheetId, setExistingSheetId] = useState<string | null>(null)
 
-  // Form state
+  // Form fields
   const [productName, setProductName] = useState('')
   const [rate, setRate] = useState<number>(0)
   const [api, setApi] = useState('')
   const [effectiveDate, setEffectiveDate] = useState(dayjs().format('YYYY-MM-DD'))
-  const [comments, setComments] = useState('')
 
   // Check access - must come from formKey navigation
   useEffect(() => {
-    if (!taskId || !processInstanceId) {
+    if (!taskId || !processInstanceId || !formKey) {
       setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to My Tasks and claim a task first.')
       setTimeout(() => navigate('/maker'), 3000)
       return
     }
-    loadTaskVariables()
-  }, [taskId, processInstanceId, navigate])
-
-  useEffect(() => {
-    if (sheetId) {
-      loadProducts()
-    }
-  }, [sheetId])
-
-  const loadTaskVariables = async () => {
-    try {
-      setLoading(true)
-      const response = await flowableApi.getTaskVariables(taskId)
-      console.log('Maker - Task variables:', response)
-      
-      const sid = response.sheetId as string
-      console.log('Maker - Extracted sheetId:', sid)
-      
-      if (!sid) {
-        setError('Sheet ID not found. Please contact administrator.')
-        return
-      }
-      
-      setSheetId(sid)
-      
-      // Check if this is a rejected task coming back
-      if (response.stage1RejectionComments) {
-        setRejectionComments(response.stage1RejectionComments as string)
-      }
-    } catch (err) {
-      setError('Failed to load task details')
-      console.error('Error loading task variables:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    // Check if sheetId already exists for this task
+    loadProducts()
+  }, [taskId, processInstanceId, formKey, navigate])
 
   const loadProducts = async () => {
     try {
       setLoading(true)
-      const data = await dataQueryApi.getProductsBySheet(sheetId)
-      setProducts(data)
-    } catch (err) {
-      setError('Failed to load products')
-      console.error('Error:', err)
+      
+      // Single API call - backend checks Sheet table and returns staging if exists, else master
+      const data = await dataQueryApi.getMakerData(processInstanceId, 'product')
+      
+      if (data.isExistingSheet) {
+        // Sheet exists - load existing staging data (rejection/back navigation case)
+        console.log('Loading existing staging data for sheetId:', data.sheetId)
+        setExistingSheetId(data.sheetId || '')
+        setProducts(data.products || [])
+        if (data.products && data.products.length > 0) {
+          setSuccessMessage('ℹ️ Loaded existing data. You can edit and resubmit.')
+        }
+      } else {
+        // No sheet exists - load fresh data from MASTER
+        console.log('No existing sheet found. Loading MASTER data.')
+        const masterData = data.products || []
+        
+        // Convert to staging format for editing (sheetId will be created by TaskListener)
+        const stagingProducts: ProductStaging[] = masterData.map((product: any) => ({
+          sheetId: '', // Will be set by backend TaskListener
+          productName: product.productName || '',
+          rate: product.rate || 0,
+          api: product.api || '',
+          effectiveDate: product.effectiveDate || '',
+          status: 'PENDING'
+        }))
+        setProducts(stagingProducts)
+      }
+    } catch (err: any) {
+      console.error('Failed to load products:', err)
+      setError('Failed to load products: ' + (err.message || 'Unknown error'))
+      setProducts([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleOpenDialog = (product?: Product) => {
+  const handleOpenDialog = (product?: ProductStaging) => {
     if (product) {
       setEditingProduct(product)
       setProductName(product.productName)
       setRate(product.rate)
       setApi(product.api)
       setEffectiveDate(product.effectiveDate)
-      setComments('')
     } else {
       setEditingProduct(null)
       setProductName('')
       setRate(0)
       setApi('')
       setEffectiveDate(dayjs().format('YYYY-MM-DD'))
-      setComments('')
     }
     setOpenDialog(true)
   }
@@ -129,76 +121,85 @@ export function ProductEdit() {
     setEditingProduct(null)
   }
 
-  const handleSaveProduct = async () => {
-    // Save locally - will be submitted with task completion
-    const newProduct: Product = {
-      id: editingProduct?.id || Date.now(),
-      sheetId,
+  const handleSaveProduct = () => {
+    const newProduct: ProductStaging = {
+      sheetId: '', // Will be set by backend TaskListener
       productName,
       rate,
       api,
       effectiveDate,
-      status: 'PENDING',
-      editedBy: 'current-user'
+      status: 'PENDING'
     }
 
     if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? newProduct : p))
-      setSuccessMessage('Product updated')
+      setProducts(products.map(p => p === editingProduct ? newProduct : p))
     } else {
       setProducts([...products, newProduct])
-      setSuccessMessage('Product added')
     }
 
     handleCloseDialog()
+    setSuccessMessage('Product saved locally. Click "Submit Products" to save.')
   }
 
-  const handleDeleteProduct = (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return
-    setProducts(products.filter(p => p.id !== id))
-    setSuccessMessage('Product deleted')
+  const handleDeleteProduct = (product: ProductStaging) => {
+    setProducts(products.filter(p => p !== product))
+    setSuccessMessage('Product removed locally. Click "Submit Products" to save.')
+  }
+
+  const handleBack = async () => {
+    try {
+      setLoading(true)
+      
+      // Navigation only - don't send products data
+      await flowableApi.completeTask(taskId, {
+        stage1Decision: 'BACK'
+      })
+      setSuccessMessage('Going back to Plans...')
+      setTimeout(() => navigate('/maker'), 2000)
+    } catch (err: any) {
+      setError('Failed to go back: ' + (err.response?.data?.message || err.message))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCompleteTask = async () => {
-    if (!taskId) return
-    
-    if (products.length === 0) {
-      setError('Please add at least one product before submitting')
-      return
-    }
-    
-    if (!sheetId) {
-      setError('Sheet ID is missing. Cannot submit.')
-      return
-    }
-
-    console.log('Completing task with:', {
-      taskId,
-      sheetId,
-      productsCount: products.length,
-      products
-    })
-
     try {
+      if (products.length === 0) {
+        setError('Please add at least one product before submitting.')
+        return
+      }
+
       setLoading(true)
-      // Note: sheetId is already in process variables, but we pass it again for clarity
-      // The TaskListener will read it from the execution context
+      setError(null)
+
+      // Strip database IDs - send only business data
+      const cleanProducts = products.map(product => ({
+        productName: product.productName,
+        rate: product.rate,
+        api: product.api,
+        effectiveDate: product.effectiveDate
+      }))
+
+      // Complete task with reason and clean products
+      // IMPORTANT: Set stage1Decision to FORWARD to override any previous BACK
       await flowableApi.completeTask(taskId, {
-        products: products,
-        makerComments: makerResponse || 'Products submitted for approval',
-        submittedAt: new Date().toISOString()
+        reason: 'submit',
+        stage1Decision: 'FORWARD', // Override any previous BACK decision
+        products: cleanProducts
       })
-      setSuccessMessage('Products submitted successfully!')
+
+      setSuccessMessage('Products submitted successfully! Redirecting...')
       setTimeout(() => navigate('/maker'), 2000)
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to complete task')
+      setError('Failed to submit products: ' + (err.response?.data?.message || err.message))
       console.error('Error completing task:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  if (!taskId || !processInstanceId) {
+  if (!taskId || !processInstanceId || !formKey) {
     return (
       <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
@@ -214,42 +215,36 @@ export function ProductEdit() {
     )
   }
 
-  if (loading && !sheetId) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    )
-  }
-
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
-        <Box mb={3}>
-          <Typography variant="h5" gutterBottom>
-            Edit Products - Stage 1
-          </Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Sheet ID: {sheetId}
-          </Typography>
-          
-          {rejectionComments && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                <strong>Checker's Feedback - Please Address:</strong>
-              </Typography>
-              <Typography variant="body2">
-                {rejectionComments}
-              </Typography>
-            </Alert>
-          )}
+        <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Stage 1: Edit Products (Final Stage)
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Task ID: {taskId}
+            </Typography>
+          </Box>
+          {/* Back to previous stage button */}
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={handleBack}
+            disabled={loading}
+            sx={{ minWidth: 150 }}
+          >
+            Back to Plans
+          </Button>
         </Box>
 
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Box></Box>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
+
+        <Box mb={2}>
           <Button
             variant="contained"
-            color="primary"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
           >
@@ -257,175 +252,120 @@ export function ProductEdit() {
           </Button>
         </Box>
 
-        {successMessage && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
-            {successMessage}
-          </Alert>
-        )}
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        {loading && !products.length ? (
-          <Box display="flex" justifyContent="center" py={5}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product Name</TableCell>
-                    <TableCell>Rate</TableCell>
-                    <TableCell>API</TableCell>
-                    <TableCell>Effective Date</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {products.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography variant="body2" color="text.secondary">
-                          No products added yet. Click "Add Product" to get started.
-                        </Typography>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Product Name</TableCell>
+                <TableCell>Rate</TableCell>
+                <TableCell>API</TableCell>
+                <TableCell>Effective Date</TableCell>
+                {existingSheetId && <TableCell>Approval Status</TableCell>}
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {products.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={existingSheetId ? 6 : 5} align="center">
+                    <Typography color="text.secondary">
+                      No products. Click "Add Product" to start.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                products.map((product, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{product.productName}</TableCell>
+                    <TableCell>${product.rate.toFixed(2)}</TableCell>
+                    <TableCell>{product.api}</TableCell>
+                    <TableCell>{product.effectiveDate}</TableCell>
+                    {existingSheetId && (
+                      <TableCell>
+                        {product.approved ? (
+                          <Chip label={`✓ ${product.approvedBy}`} color="success" size="small" />
+                        ) : (
+                          <Chip label="Pending" color="default" size="small" />
+                        )}
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    products.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>{product.productName}</TableCell>
-                        <TableCell>{typeof product.rate === 'number' ? product.rate.toFixed(2) : product.rate}</TableCell>
-                        <TableCell>{product.api}</TableCell>
-                        <TableCell>{dayjs(product.effectiveDate).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell>{product.status || 'PENDING'}</TableCell>
-                        <TableCell>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handleOpenDialog(product)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteProduct(product.id!)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    )}
+                    <TableCell>
+                      <IconButton size="small" onClick={() => handleOpenDialog(product)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDeleteProduct(product)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-            <Paper sx={{ p: 2, mb: 3 }}>
-              <TextField
-                fullWidth
-                label="Comments for Checker"
-                value={makerResponse}
-                onChange={(e) => setMakerResponse(e.target.value)}
-                multiline
-                rows={3}
-                placeholder={rejectionComments ? "Explain what you've corrected..." : "Optional: Add any notes for the checker..."}
-                helperText={rejectionComments ? "Please explain the changes you made to address the feedback" : ""}
-              />
-            </Paper>
-
-            <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/maker')}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                size="large"
-                startIcon={<SaveIcon />}
-                onClick={handleCompleteTask}
-                disabled={loading || products.length === 0}
-              >
-                Submit for Approval
-              </Button>
-            </Box>
-          </>
-        )}
+        <Box mt={3} display="flex" gap={2}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={handleCompleteTask}
+            disabled={loading || products.length === 0}
+          >
+            {loading ? 'Submitting...' : 'Submit Products'}
+          </Button>
+        </Box>
       </Paper>
 
-      {/* Add/Edit Product Dialog */}
+      {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
         <DialogContent>
-          <TextField
-            label="Product Name"
-            fullWidth
-            margin="normal"
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
-            required
-          />
-          <TextField
-            label="Rate"
-            type="number"
-            fullWidth
-            margin="normal"
-            value={rate}
-            onChange={(e) => setRate(Number(e.target.value))}
-            required
-          />
-          <TextField
-            label="API"
-            fullWidth
-            margin="normal"
-            value={api}
-            onChange={(e) => setApi(e.target.value)}
-            required
-            helperText="API name or identifier"
-          />
-          <TextField
-            label="Effective Date"
-            type="date"
-            fullWidth
-            margin="normal"
-            value={effectiveDate}
-            onChange={(e) => setEffectiveDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            required
-          />
-          <TextField
-            label="Comments"
-            fullWidth
-            margin="normal"
-            multiline
-            rows={3}
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label="Product Name"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Rate"
+              type="number"
+              value={rate}
+              onChange={(e) => setRate(Number(e.target.value))}
+              fullWidth
+              required
+            />
+            <TextField
+              label="API"
+              value={api}
+              onChange={(e) => setApi(e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Effective Date"
+              type="date"
+              value={effectiveDate}
+              onChange={(e) => setEffectiveDate(e.target.value)}
+              fullWidth
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color="secondary">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveProduct}
-            color="primary"
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button 
+            onClick={handleSaveProduct} 
             variant="contained"
-            disabled={!productName || !api}
+            disabled={!productName || rate <= 0 || !api}
           >
-            {editingProduct ? 'Update' : 'Add'}
+            Save
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   )
 }
-

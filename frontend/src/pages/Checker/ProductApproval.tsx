@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -12,142 +12,177 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField
+  Checkbox,
+  Chip
 } from '@mui/material'
 import { useLocation, useNavigate } from 'react-router-dom'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import CancelIcon from '@mui/icons-material/Cancel'
-import { flowableApi, dataQueryApi, Product } from '../../api/flowableApi'
-import dayjs from 'dayjs'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { flowableApi, dataQueryApi } from '../../api/flowableApi'
+import { stagingApi, ProductStaging } from '../../api/stagingApi'
+import { useRecoilValue } from 'recoil'
+import { authState } from '../../state/auth'
 
 export function ProductApproval() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { taskId, processInstanceId } = location.state || {}
+  const { taskId, processInstanceId, formKey } = location.state || {}
+  const auth = useRecoilValue(authState)
 
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<ProductStaging[]>([])
+  const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [sheetId, setSheetId] = useState<string>('')
-  const [comments, setComments] = useState('')
-  const [makerComments, setMakerComments] = useState<string>('')
-  const [rejectionHistory, setRejectionHistory] = useState<string>('')
+  const [allRowsApproved, setAllRowsApproved] = useState(false)
+  const [sheetApproved, setSheetApproved] = useState(false)
 
   // Check access - must come from formKey navigation
   useEffect(() => {
-    if (!taskId || !processInstanceId) {
+    if (!taskId || !processInstanceId || !formKey) {
       setError('❌ Unauthorized Access: This page can only be accessed from a claimed task. Please go to Pending Approvals and claim a task first.')
       setTimeout(() => navigate('/checker'), 3000)
       return
     }
-    loadTaskVariables()
-  }, [taskId, processInstanceId, navigate])
+    loadApprovalData()
+  }, [taskId, processInstanceId, formKey, navigate])
 
-  useEffect(() => {
-    if (sheetId) {
-      loadProducts()
-    }
-  }, [sheetId])
-
-  const loadTaskVariables = async () => {
+  const loadApprovalData = async () => {
     try {
       setLoading(true)
-      const response = await flowableApi.getTaskVariables(taskId)
-      console.log('Task variables:', response)
       
-      const sid = response.sheetId as string
-      console.log('Extracted sheetId:', sid)
+      // Single API call gets everything: sheetId, products, and sheet status
+      const data = await dataQueryApi.getApprovalData(processInstanceId, 'product')
       
-      if (!sid) {
-        setError('Sheet ID not found in task variables. This task may not have been started correctly.')
-        return
-      }
+      setSheetId(data.sheetId)
+      setProducts(data.products || [])
+      setSheetApproved(!!data.sheet.approvedAt)
       
-      setSheetId(sid)
+      // Check if all rows are approved
+      const allApproved = data.products && data.products.length > 0 && data.products.every(p => p.approved === true)
+      setAllRowsApproved(!!allApproved)
       
-      // Load previous rejection comments if any
-      if (response.stage1RejectionComments) {
-        setRejectionHistory(response.stage1RejectionComments as string)
-      }
+      console.log('✓ Loaded approval data:', data)
       
-      // Load maker's comments
-      if (response.makerComments) {
-        setMakerComments(response.makerComments as string)
-      }
     } catch (err: any) {
-      if (err?.response?.status === 404 || err?.message?.includes("doesn't exist")) {
-        setError('This task no longer exists. It may have been completed or cancelled. Please refresh the task list.')
-        setTimeout(() => navigate('/checker'), 3000)
-      } else {
-        setError('Failed to load task details: ' + (err?.response?.data?.message || err?.message))
-      }
-      console.error('Error loading task variables:', err)
+      console.error('Failed to load approval data:', err)
+      setError('Failed to load data: ' + (err.response?.data?.message || err.message || 'Unknown error'))
     } finally {
       setLoading(false)
     }
   }
 
-  const loadProducts = async () => {
-    if (!sheetId) {
-      console.warn('Cannot load products: sheetId is empty')
-      return
+  const loadProducts = async (sid: string) => {
+    // Reload data after approvals
+    try {
+      const data = await stagingApi.getProductsStaging(sid)
+      setProducts(data)
+      
+      // Check if all rows are approved
+      const allApproved = data.length > 0 && data.every(p => p.approved === true)
+      setAllRowsApproved(allApproved)
+      
+      // Load sheet status
+      const sheet = await stagingApi.getSheet(sid)
+      setSheetApproved(!!sheet.approvedAt)
+    } catch (err) {
+      console.error('Failed to reload products:', err)
     }
-    
+  }
+
+  const handleToggleProduct = (id: number) => {
+    const newSelected = new Set(selectedProducts)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedProducts(newSelected)
+  }
+
+  const handleApproveSelected = async () => {
     try {
       setLoading(true)
-      console.log('Loading products for sheetId:', sheetId)
-      const data = await dataQueryApi.getProductsBySheet(sheetId)
-      console.log('Loaded products:', data)
-      setProducts(data)
-    } catch (err) {
-      setError('Failed to load products')
-      console.error('Error loading products:', err)
+      const approverUsername = auth.username || 'checker'
+      
+      for (const id of selectedProducts) {
+        await stagingApi.approveProductIndividual(id, approverUsername)
+      }
+
+      setSuccessMessage(`Approved ${selectedProducts.size} product(s) individually`)
+      setSelectedProducts(new Set())
+      await loadProducts(sheetId)
+    } catch (err: any) {
+      setError('Failed to approve products: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleApprove = async () => {
+  const handleApproveAll = async () => {
     try {
+      setLoading(true)
+      const approverUsername = auth.username || 'checker'
+      
+      await stagingApi.approveProductsBulk(sheetId, approverUsername)
+
+      setSuccessMessage('All products approved in bulk')
+      await loadProducts(sheetId)
+    } catch (err: any) {
+      setError('Failed to bulk approve: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBack = async () => {
+    try {
+      setLoading(true)
       await flowableApi.completeTask(taskId, {
-        checkerComments: comments,
-        checkerDecision: 'APPROVE',
-        approved: true,
-        stage1Decision: 'APPROVE'
+        stage1Decision: 'BACK'
       })
-      setSuccessMessage('Products approved successfully')
+      setSuccessMessage('Going back to Plans...')
       setTimeout(() => navigate('/checker'), 2000)
-    } catch (err) {
-      setError('Failed to approve products')
-      console.error('Error:', err)
+    } catch (err: any) {
+      setError('Failed to go back: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleApproveSheet = async () => {
+    try {
+      setLoading(true)
+      const approverUsername = auth.username || 'checker'
+      
+      // Backend will approve sheet AND complete task
+      await stagingApi.approveSheet(sheetId, approverUsername, taskId, 'stage1Decision')
+      
+      setSuccessMessage('Sheet approved and task completed! Process moving to next stage...')
+      setTimeout(() => navigate('/checker'), 2000)
+    } catch (err: any) {
+      setError('Failed to approve and complete: ' + err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleReject = async () => {
-    if (!comments.trim()) {
-      setError('Please provide rejection comments explaining what needs to be fixed')
-      return
-    }
-
     try {
+      setLoading(true)
       await flowableApi.completeTask(taskId, {
-        checkerComments: comments,
-        checkerDecision: 'REJECT',
-        approved: false,
-        stage1Decision: 'REJECT',
-        stage1RejectionComments: comments, // Store for maker to see
-        rejectedAt: new Date().toISOString()
+        stage1Decision: 'REJECT'
       })
-      setSuccessMessage('Products rejected - Sent back to Maker for corrections')
+      setSuccessMessage('Products rejected! Sending back to maker...')
       setTimeout(() => navigate('/checker'), 2000)
-    } catch (err) {
-      setError('Failed to reject products')
-      console.error('Error:', err)
+    } catch (err: any) {
+      setError('Failed to reject: ' + err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (!taskId || !processInstanceId) {
+  if (!taskId || !processInstanceId || !formKey) {
     return (
       <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <Alert severity="error" sx={{ maxWidth: 600, mb: 3 }}>
@@ -173,126 +208,146 @@ export function ProductApproval() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Approve Products - Stage 1
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
-          {successMessage}
-        </Alert>
-      )}
-
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          <strong>Sheet ID:</strong> {sheetId}
-        </Typography>
-        
-        {makerComments && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Maker's Comments:
+      <Paper sx={{ p: 3 }}>
+        <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Stage 1: Approve Products (Final Stage)
             </Typography>
-            <Typography variant="body2">
-              {makerComments}
+            <Typography variant="body2" color="text.secondary">
+              Sheet ID: {sheetId}
             </Typography>
           </Box>
-        )}
-        
-        {rejectionHistory && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
-            <Typography variant="subtitle2" gutterBottom color="error">
-              Previous Rejection Comments:
-            </Typography>
-            <Typography variant="body2">
-              {rejectionHistory}
-            </Typography>
-          </Box>
-        )}
-      </Paper>
+          {/* Back to previous stage button */}
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={handleBack}
+            disabled={loading}
+            sx={{ minWidth: 150 }}
+          >
+            Back to Plans
+          </Button>
+        </Box>
 
-      <TableContainer component={Paper} sx={{ mb: 3 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Product Name</TableCell>
-              <TableCell>Rate</TableCell>
-              <TableCell>API</TableCell>
-              <TableCell>Effective Date</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Edited By</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {products.length === 0 ? (
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
+
+        <Box mb={2} display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            onClick={handleApproveSelected}
+            disabled={selectedProducts.size === 0 || loading}
+          >
+            Approve Selected ({selectedProducts.size})
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleApproveAll}
+            disabled={loading}
+          >
+            Approve All
+          </Button>
+        </Box>
+
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={6} align="center">
-                  No products found
+                <TableCell padding="checkbox">
+                  <Checkbox 
+                    checked={selectedProducts.size === products.length && products.length > 0}
+                    onChange={() => {
+                      if (selectedProducts.size === products.length) {
+                        setSelectedProducts(new Set())
+                      } else {
+                        setSelectedProducts(new Set(products.map(p => p.id!)))
+                      }
+                    }}
+                  />
                 </TableCell>
+                <TableCell>Product Name</TableCell>
+                <TableCell>Rate</TableCell>
+                <TableCell>API</TableCell>
+                <TableCell>Effective Date</TableCell>
+                <TableCell>Approval Status</TableCell>
               </TableRow>
-            ) : (
-              products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>{product.productName}</TableCell>
-                  <TableCell>{product.rate}</TableCell>
-                  <TableCell>{product.api}</TableCell>
-                  <TableCell>{dayjs(product.effectiveDate).format('YYYY-MM-DD')}</TableCell>
-                  <TableCell>{product.status}</TableCell>
-                  <TableCell>{product.editedBy}</TableCell>
+            </TableHead>
+            <TableBody>
+              {products.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <Typography color="text.secondary">
+                      No products to approve
+                    </Typography>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                products.filter(product => product.id !== undefined).map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedProducts.has(product.id as number)}
+                        onChange={() => handleToggleProduct(product.id as number)}
+                      />
+                    </TableCell>
+                    <TableCell>{product.productName || 'N/A'}</TableCell>
+                    <TableCell>${(product.rate || 0).toFixed(2)}</TableCell>
+                    <TableCell>{product.api || 'N/A'}</TableCell>
+                    <TableCell>{product.effectiveDate || 'N/A'}</TableCell>
+                    <TableCell>
+                      {product.approved ? (
+                        <Chip 
+                          label={`Approved by ${product.approvedBy || 'N/A'}`} 
+                          color="success" 
+                          size="small" 
+                        />
+                      ) : (
+                        <Chip label="Pending" color="default" size="small" />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          label="Checker Comments"
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
-          multiline
-          rows={4}
-          placeholder="Provide feedback here. For rejection, clearly explain what needs to be corrected."
-          helperText="For rejection: Specify which products need changes and what corrections are required"
-          required
-        />
+        <Box mt={3} display="flex" gap={2} flexDirection="column">
+          {/* Row Approval Status */}
+          {allRowsApproved && !sheetApproved && (
+            <Alert severity="info">
+              ✅ All rows are approved! You can now approve the entire sheet.
+            </Alert>
+          )}
+          {sheetApproved && (
+            <Alert severity="success">
+              ✅ Sheet has been approved and task completed!
+            </Alert>
+          )}
+          
+          {/* Action Buttons */}
+          <Box display="flex" gap={2}>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleReject}
+              disabled={loading}
+            >
+              Reject Products (Send Back to Maker)
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleApproveSheet}
+              disabled={loading || !allRowsApproved}
+            >
+              Approve Sheet & Complete Task
+            </Button>
+          </Box>
+        </Box>
       </Paper>
-
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <Button
-          variant="contained"
-          color="success"
-          startIcon={<CheckCircleIcon />}
-          onClick={handleApprove}
-          disabled={loading}
-        >
-          Approve
-        </Button>
-        <Button
-          variant="contained"
-          color="error"
-          startIcon={<CancelIcon />}
-          onClick={handleReject}
-          disabled={loading || !comments.trim()}
-        >
-          Reject
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => navigate('/checker')}
-        >
-          Cancel
-        </Button>
-      </Box>
     </Box>
   )
 }
-

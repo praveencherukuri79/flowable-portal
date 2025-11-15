@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -16,14 +16,7 @@ import {
   Grid,
   Card,
   CardContent,
-  IconButton,
   Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   Accordion,
   AccordionSummary,
@@ -31,7 +24,6 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import DeleteIcon from '@mui/icons-material/Delete'
 import PauseIcon from '@mui/icons-material/Pause'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
