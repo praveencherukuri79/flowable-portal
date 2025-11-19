@@ -100,13 +100,53 @@ public class TaskListenerUtils {
             java.util.Optional<SheetDto> existingSheetOpt = sheetService.findSheetByProcessAndType(processInstanceId, sheetType);
             
             if (existingSheetOpt.isPresent()) {
-                // Update existing sheet
+                // Existing sheet found - create new version
                 SheetDto existingSheet = existingSheetOpt.get();
-                log.info("✓ Found existing sheet: {}. Updating staging data.", existingSheet.getSheetId());
-                updateExistingData(existingSheet.getSheetId(), incomingData, editedBy, entityType, hasChangedPredicate, getNameFunction);
-                delegateTask.setVariable(variableName, existingSheet.getSheetId());
+                String existingSheetId = existingSheet.getSheetId();
+                log.info("✓ Found existing sheet: {} (version {}). Creating new version.", 
+                        existingSheetId, existingSheet.getVersion());
+                
+                // Load existing data for comparison
+                List<T> existingData = loadExistingData(existingSheetId, entityType);
+                log.info("✓ Loaded {} existing {} for comparison", existingData.size(), entityType.toLowerCase() + "s");
+                
+                // Create new sheet with incremented version
+                SheetDto newSheet = sheetService.createSheet(processInstanceId, sheetType, editedBy);
+                String newSheetId = newSheet.getSheetId();
+                log.info("✓ Created new sheet: {} (version {})", newSheetId, newSheet.getVersion());
+                
+                // Process incoming data: compare with existing, set approval status, and set sheetId in one step
+                LocalDateTime now = LocalDateTime.now();
+                for (T incoming : incomingData) {
+                    // Find matching existing item by comparing business data
+                    T matchingExisting = findMatching(existingData, incoming, hasChangedPredicate);
+                    
+                    if (matchingExisting != null && !hasChangedPredicate.test(matchingExisting, incoming)) {
+                        // Data unchanged - preserve approval info
+                        copyApprovalInfo(matchingExisting, incoming);
+                        log.debug("✓ Preserved approval for unchanged {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
+                    } else {
+                        // Data changed or new - clear approval
+                        clearApproval(incoming);
+                        if (matchingExisting != null) {
+                            log.info("✓ Revoked approval for changed {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
+                        } else {
+                            log.info("✓ New {} added: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
+                        }
+                    }
+                    
+                    // Set metadata including sheetId
+                    setBasicMetadata(incoming, newSheetId, editedBy, now);
+                }
+                
+                // Save new incoming data to new sheetId (old data already preserved in old sheetId)
+                saveData(incomingData, entityType);
+                log.info("✓ Saved {} new {} for sheet {}", incomingData.size(), entityType.toLowerCase() + "s", newSheetId);
+                
+                // Update process variable with new sheetId
+                delegateTask.setVariable(variableName, newSheetId);
             } else {
-                // Create new sheet
+                // Create new sheet (first submission)
                 log.info("✓ Creating new sheet for process");
                 createNewSheet(delegateTask, incomingData, editedBy, sheetType, variableName, entityType);
             }
@@ -163,51 +203,6 @@ public class TaskListenerUtils {
         log.info("✓ Saved {} new {}", data.size(), entityType.toLowerCase() + "s");
     }
     
-    private <T> void updateExistingData(
-            String sheetId,
-            List<T> incomingData,
-            String editedBy,
-            String entityType,
-            BiPredicate<T, T> hasChangedPredicate,
-            Function<T, String> getNameFunction) {
-        
-        // Load existing staging data
-        List<T> existingData = loadExistingData(sheetId, entityType);
-        log.info("✓ Loaded {} existing {} for sheet {}", existingData.size(), entityType.toLowerCase() + "s", sheetId);
-        
-        // Delete all existing data first
-        deleteBySheetId(sheetId, entityType);
-        log.info("✓ Cleared existing {} for sheet {}", entityType.toLowerCase() + "s", sheetId);
-        
-        LocalDateTime now = LocalDateTime.now();
-        
-        // Process incoming data
-        for (T incoming : incomingData) {
-            setBasicMetadata(incoming, sheetId, editedBy, now);
-            
-            // Find matching existing item by comparing business data
-            T matchingExisting = findMatching(existingData, incoming, hasChangedPredicate);
-            
-            if (matchingExisting != null && !hasChangedPredicate.test(matchingExisting, incoming)) {
-                // Data unchanged - preserve approval info
-                copyApprovalInfo(matchingExisting, incoming);
-                log.debug("✓ Preserved approval for unchanged {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
-            } else {
-                // Data changed or new - clear approval
-                clearApproval(incoming);
-                if (matchingExisting != null) {
-                    log.info("✓ Revoked approval for changed {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
-                } else {
-                    log.info("✓ New {} added: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
-                }
-            }
-        }
-        
-        // Save all data
-        saveData(incomingData, entityType);
-        log.info("✓ Updated {} {} for sheet {}", incomingData.size(), entityType.toLowerCase() + "s", sheetId);
-    }
-    
     @SuppressWarnings("unchecked")
     private <T> List<T> loadExistingData(String sheetId, String entityType) {
         switch (entityType) {
@@ -217,22 +212,6 @@ public class TaskListenerUtils {
                 return (List<T>) planStagingService.getPlansBySheetId(sheetId);
             case "Product":
                 return (List<T>) productStagingService.getProductsBySheetId(sheetId);
-            default:
-                throw new IllegalArgumentException("Unknown entity type: " + entityType);
-        }
-    }
-    
-    private void deleteBySheetId(String sheetId, String entityType) {
-        switch (entityType) {
-            case "Item":
-                itemStagingService.deleteBySheetId(sheetId);
-                break;
-            case "Plan":
-                planStagingService.deleteBySheetId(sheetId);
-                break;
-            case "Product":
-                productStagingService.deleteBySheetId(sheetId);
-                break;
             default:
                 throw new IllegalArgumentException("Unknown entity type: " + entityType);
         }

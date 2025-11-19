@@ -50,6 +50,12 @@ public class TaskDto {
     @Schema(description = "Task creation time")
     public Date createTime;
     
+    @Schema(description = "Task end time (for completed/historic tasks)")
+    public Date endTime;
+    
+    @Schema(description = "Task duration in milliseconds (for completed/historic tasks)")
+    public Long durationInMillis;
+    
     @Schema(description = "Task due date")
     public Date dueDate;
     

@@ -10,6 +10,7 @@ public class SheetDto {
     private String sheetId;
     private String sheetType; // item, plan, or product
     private String processInstanceId;
+    private Integer version; // Version number for this processInstanceId + sheetType combination
     private String createdBy;
     private LocalDateTime createdAt;
     private String approvedBy;

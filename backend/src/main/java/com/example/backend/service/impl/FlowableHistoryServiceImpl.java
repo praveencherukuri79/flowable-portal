@@ -1,12 +1,11 @@
 package com.example.backend.service.impl;
 
-import com.example.backend.dto.HistoricProcessInstanceDto;
-import com.example.backend.dto.HistoricTaskInstanceDto;
+import com.example.backend.dto.ProcessInstanceDto;
+import com.example.backend.dto.TaskDto;
 import com.example.backend.service.FlowableHistoryService;
 import com.example.backend.util.DtoMapper;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.history.HistoricProcessInstance;
-import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,59 +24,59 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     private HistoryService historyService;
 
     @Override
-    public List<HistoricProcessInstanceDto> getProcessHistory(String processKey) {
+    public List<ProcessInstanceDto> getProcessHistory(String processKey) {
         return historyService.createHistoricProcessInstanceQuery()
                 .processDefinitionKey(processKey)
                 .list()
                 .stream()
-                .map(this::toHistoricProcessInstanceDto)
+                .map(DtoMapper::toProcessInstanceDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<HistoricProcessInstanceDto> getAllProcessHistory() {
+    public List<ProcessInstanceDto> getAllProcessHistory() {
         return historyService.createHistoricProcessInstanceQuery()
                 .list()
                 .stream()
-                .map(this::toHistoricProcessInstanceDto)
+                .map(DtoMapper::toProcessInstanceDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public HistoricProcessInstanceDto getHistoricProcessInstance(String processInstanceId) {
+    public ProcessInstanceDto getHistoricProcessInstance(String processInstanceId) {
         HistoricProcessInstance hpi = historyService.createHistoricProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .singleResult();
-        return hpi != null ? toHistoricProcessInstanceDto(hpi) : null;
+        return hpi != null ? DtoMapper.toProcessInstanceDto(hpi) : null;
     }
 
     @Override
-    public List<HistoricTaskInstanceDto> getTaskHistory(String processInstanceId) {
+    public List<TaskDto> getTaskHistory(String processInstanceId) {
         return historyService.createHistoricTaskInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .list()
                 .stream()
-                .map(this::toHistoricTaskInstanceDto)
+                .map(DtoMapper::toTaskDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<HistoricTaskInstanceDto> getTaskHistoryByUser(String user) {
+    public List<TaskDto> getTaskHistoryByUser(String user) {
         return historyService.createHistoricTaskInstanceQuery()
                 .taskAssignee(user)
                 .list()
                 .stream()
-                .map(this::toHistoricTaskInstanceDto)
+                .map(DtoMapper::toTaskDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<HistoricTaskInstanceDto> getCompletedTasks() {
+    public List<TaskDto> getCompletedTasks() {
         return historyService.createHistoricTaskInstanceQuery()
                 .finished()
                 .list()
                 .stream()
-                .map(this::toHistoricTaskInstanceDto)
+                .map(DtoMapper::toTaskDto)
                 .collect(Collectors.toList());
     }
 
@@ -112,7 +111,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     }
 
     @Override
-    public List<HistoricProcessInstanceDto> getProcessHistoryByDateRange(String startDate, String endDate) {
+    public List<ProcessInstanceDto> getProcessHistoryByDateRange(String startDate, String endDate) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         try {
             Date start = sdf.parse(startDate);
@@ -123,18 +122,10 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
                     .startedBefore(end)
                     .list()
                     .stream()
-                    .map(this::toHistoricProcessInstanceDto)
+                    .map(DtoMapper::toProcessInstanceDto)
                     .collect(Collectors.toList());
         } catch (ParseException e) {
             throw new RuntimeException("Invalid date format. Use yyyy-MM-dd", e);
         }
-    }
-
-    private HistoricProcessInstanceDto toHistoricProcessInstanceDto(HistoricProcessInstance hpi) {
-        return DtoMapper.toHistoricProcessInstanceDto(hpi);
-    }
-
-    private HistoricTaskInstanceDto toHistoricTaskInstanceDto(HistoricTaskInstance hti) {
-        return DtoMapper.toHistoricTaskInstanceDto(hti);
     }
 }

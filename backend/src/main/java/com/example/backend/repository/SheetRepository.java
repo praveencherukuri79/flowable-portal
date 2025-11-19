@@ -11,6 +11,9 @@ public interface SheetRepository extends JpaRepository<Sheet, Long> {
     
     Optional<Sheet> findBySheetId(String sheetId);
     
-    Optional<Sheet> findByProcessInstanceIdAndSheetType(String processInstanceId, String sheetType);
+    /**
+     * Find the latest sheet (highest version) for a processInstanceId + sheetType combination
+     */
+    Optional<Sheet> findFirstByProcessInstanceIdAndSheetTypeOrderByVersionDesc(String processInstanceId, String sheetType);
 }
 

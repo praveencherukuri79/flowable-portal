@@ -33,12 +33,12 @@ public class DataMigrationServiceImpl implements DataMigrationService {
             throw new IllegalArgumentException("processInstanceId cannot be null or empty");
         }
         
-        // Step 1: Get all 3 sheets for this process instance
-        Sheet productSheet = sheetRepository.findByProcessInstanceIdAndSheetType(processInstanceId, "product")
+        // Step 1: Get latest version of all 3 sheets for this process instance
+        Sheet productSheet = sheetRepository.findFirstByProcessInstanceIdAndSheetTypeOrderByVersionDesc(processInstanceId, "product")
                 .orElseThrow(() -> new RuntimeException("Product sheet not found for process: " + processInstanceId));
-        Sheet planSheet = sheetRepository.findByProcessInstanceIdAndSheetType(processInstanceId, "plan")
+        Sheet planSheet = sheetRepository.findFirstByProcessInstanceIdAndSheetTypeOrderByVersionDesc(processInstanceId, "plan")
                 .orElseThrow(() -> new RuntimeException("Plan sheet not found for process: " + processInstanceId));
-        Sheet itemSheet = sheetRepository.findByProcessInstanceIdAndSheetType(processInstanceId, "item")
+        Sheet itemSheet = sheetRepository.findFirstByProcessInstanceIdAndSheetTypeOrderByVersionDesc(processInstanceId, "item")
                 .orElseThrow(() -> new RuntimeException("Item sheet not found for process: " + processInstanceId));
         
         log.info("Found sheets - Product: {}, Plan: {}, Item: {}", 

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -26,19 +27,26 @@ public class SheetServiceImpl implements SheetService {
     
     @Override
     public SheetDto createSheet(String processInstanceId, String sheetType, String createdBy) {
+        // Get the next version number for this processInstanceId + sheetType combination
+        Optional<Sheet> latestSheet = sheetRepository.findFirstByProcessInstanceIdAndSheetTypeOrderByVersionDesc(
+                processInstanceId, sheetType.toLowerCase());
+        Integer nextVersion = latestSheet.map(sheet -> sheet.getVersion() + 1).orElse(1);
+        
         String sheetId = "SHEET-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         
         Sheet sheet = Sheet.builder()
                 .sheetId(sheetId)
                 .sheetType(sheetType.toLowerCase())
                 .processInstanceId(processInstanceId)
+                .version(nextVersion)
                 .createdBy(createdBy)
                 .createdAt(LocalDateTime.now())
                 .status("PENDING")
                 .build();
         
         sheet = sheetRepository.save(sheet);
-        log.info("✓ Created new sheet: {} for type: {} in process: {}", sheetId, sheetType, processInstanceId);
+        log.info("✓ Created new sheet: {} (version {}) for type: {} in process: {}", 
+                sheetId, nextVersion, sheetType, processInstanceId);
         
         return mapToDto(sheet);
     }
@@ -95,7 +103,9 @@ public class SheetServiceImpl implements SheetService {
     @Override
     @Transactional(readOnly = true)
     public java.util.Optional<SheetDto> findSheetByProcessAndType(String processInstanceId, String sheetType) {
-        return sheetRepository.findByProcessInstanceIdAndSheetType(processInstanceId, sheetType.toLowerCase())
+        // Return the latest sheet (highest version) for this processInstanceId + sheetType
+        return sheetRepository.findFirstByProcessInstanceIdAndSheetTypeOrderByVersionDesc(
+                processInstanceId, sheetType.toLowerCase())
                 .map(this::mapToDto);
     }
     
@@ -113,6 +123,7 @@ public class SheetServiceImpl implements SheetService {
         dto.setSheetId(sheet.getSheetId());
         dto.setSheetType(sheet.getSheetType());
         dto.setProcessInstanceId(sheet.getProcessInstanceId());
+        dto.setVersion(sheet.getVersion());
         dto.setCreatedBy(sheet.getCreatedBy());
         dto.setCreatedAt(sheet.getCreatedAt());
         dto.setApprovedBy(sheet.getApprovedBy());

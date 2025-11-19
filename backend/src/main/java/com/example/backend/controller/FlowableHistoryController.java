@@ -1,7 +1,7 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.HistoricProcessInstanceDto;
-import com.example.backend.dto.HistoricTaskInstanceDto;
+import com.example.backend.dto.ProcessInstanceDto;
+import com.example.backend.dto.TaskDto;
 import com.example.backend.service.FlowableHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,7 +30,7 @@ public class FlowableHistoryController {
     /**
      * Get process history by process definition key.
      * @param processKey process definition key
-     * @return list of HistoricProcessInstanceDto
+     * @return list of ProcessInstanceDto (consolidated DTO for both active and historic instances)
      */
     @Operation(
         summary = "Get Process History by Key",
@@ -40,13 +40,13 @@ public class FlowableHistoryController {
         @ApiResponse(
             responseCode = "200", 
             description = "Successfully retrieved process history",
-            content = @Content(schema = @Schema(implementation = HistoricProcessInstanceDto.class))
+            content = @Content(schema = @Schema(implementation = ProcessInstanceDto.class))
         ),
         @ApiResponse(responseCode = "404", description = "Process definition not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/process/{processKey}")
-    public List<HistoricProcessInstanceDto> getProcessHistory(
+    public List<ProcessInstanceDto> getProcessHistory(
             @Parameter(description = "Process definition key", required = true, example = "retentionOffer")
             @PathVariable String processKey) {
         return historyService.getProcessHistory(processKey);
@@ -54,7 +54,7 @@ public class FlowableHistoryController {
 
     /**
      * Get all process history.
-     * @return list of HistoricProcessInstanceDto
+     * @return list of ProcessInstanceDto (consolidated DTO for both active and historic instances)
      */
     @Operation(
         summary = "Get All Process History",
@@ -64,51 +64,51 @@ public class FlowableHistoryController {
         @ApiResponse(
             responseCode = "200", 
             description = "Successfully retrieved all process history",
-            content = @Content(schema = @Schema(implementation = HistoricProcessInstanceDto.class))
+            content = @Content(schema = @Schema(implementation = ProcessInstanceDto.class))
         ),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/process")
-    public List<HistoricProcessInstanceDto> getAllProcessHistory() {
+    public List<ProcessInstanceDto> getAllProcessHistory() {
         return historyService.getAllProcessHistory();
     }
 
     /**
      * Get specific historic process instance.
      * @param processInstanceId process instance id
-     * @return HistoricProcessInstanceDto
+     * @return ProcessInstanceDto (consolidated DTO for both active and historic instances)
      */
     @GetMapping("/process/instance/{processInstanceId}")
-    public HistoricProcessInstanceDto getHistoricProcessInstance(@PathVariable String processInstanceId) {
+    public ProcessInstanceDto getHistoricProcessInstance(@PathVariable String processInstanceId) {
         return historyService.getHistoricProcessInstance(processInstanceId);
     }
 
     /**
      * Get task history for a process instance.
      * @param processInstanceId process instance id
-     * @return list of HistoricTaskInstanceDto
+     * @return list of TaskDto (consolidated DTO for both active and historic tasks)
      */
     @GetMapping("/task/process/{processInstanceId}")
-    public List<HistoricTaskInstanceDto> getTaskHistory(@PathVariable String processInstanceId) {
+    public List<TaskDto> getTaskHistory(@PathVariable String processInstanceId) {
         return historyService.getTaskHistory(processInstanceId);
     }
 
     /**
      * Get task history for a user.
      * @param user username
-     * @return list of HistoricTaskInstanceDto
+     * @return list of TaskDto (consolidated DTO for both active and historic tasks)
      */
     @GetMapping("/task/user/{user}")
-    public List<HistoricTaskInstanceDto> getTaskHistoryByUser(@PathVariable String user) {
+    public List<TaskDto> getTaskHistoryByUser(@PathVariable String user) {
         return historyService.getTaskHistoryByUser(user);
     }
 
     /**
      * Get all completed tasks.
-     * @return list of HistoricTaskInstanceDto
+     * @return list of TaskDto (consolidated DTO for both active and historic tasks)
      */
     @GetMapping("/task/completed")
-    public List<HistoricTaskInstanceDto> getCompletedTasks() {
+    public List<TaskDto> getCompletedTasks() {
         return historyService.getCompletedTasks();
     }
 
@@ -134,10 +134,10 @@ public class FlowableHistoryController {
      * Get process history by date range.
      * @param startDate start date (yyyy-MM-dd)
      * @param endDate end date (yyyy-MM-dd)
-     * @return list of HistoricProcessInstanceDto
+     * @return list of ProcessInstanceDto (consolidated DTO for both active and historic instances)
      */
     @GetMapping("/process/date-range")
-    public List<HistoricProcessInstanceDto> getProcessHistoryByDateRange(
+    public List<ProcessInstanceDto> getProcessHistoryByDateRange(
             @RequestParam String startDate, @RequestParam String endDate) {
         return historyService.getProcessHistoryByDateRange(startDate, endDate);
     }

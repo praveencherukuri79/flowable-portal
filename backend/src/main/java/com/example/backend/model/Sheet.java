@@ -35,6 +35,10 @@ public class Sheet {
     private String processInstanceId;
     
     @Column(nullable = false)
+    @Builder.Default
+    private Integer version = 1; // Version increments for each submission of same processInstanceId + sheetType
+    
+    @Column(nullable = false)
     private String createdBy;
     
     @Column(nullable = false)

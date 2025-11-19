@@ -188,6 +188,7 @@ export interface ApprovalDataResponse {
     sheetId: string
     processInstanceId: string
     sheetType: string // item, plan, or product
+    version?: number // Version number for this processInstanceId + sheetType combination
     status: string
     createdBy?: string
     createdAt?: string

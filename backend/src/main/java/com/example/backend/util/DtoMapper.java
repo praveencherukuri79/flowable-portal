@@ -109,28 +109,30 @@ public final class DtoMapper {
     // Identity service functionality removed as per requirements    // ==================== HISTORY MAPPING ====================
     
     /**
-     * Convert HistoricProcessInstance to HistoricProcessInstanceDto using builder pattern
+     * Convert HistoricProcessInstance to ProcessInstanceDto (reusing ProcessInstanceDto for historic instances)
      */
-    public static HistoricProcessInstanceDto toHistoricProcessInstanceDto(HistoricProcessInstance hpi) {
-        return HistoricProcessInstanceDto.builder()
+    public static ProcessInstanceDto toProcessInstanceDto(HistoricProcessInstance hpi) {
+        return ProcessInstanceDto.builder()
                 .id(hpi.getId())
                 .processDefinitionId(hpi.getProcessDefinitionId())
                 .processDefinitionKey(hpi.getProcessDefinitionKey())
                 .businessKey(hpi.getBusinessKey())
                 .startUserId(hpi.getStartUserId())
-                .startTime(hpi.getStartTime())
-                .endTime(hpi.getEndTime())
+                .startTime(hpi.getStartTime() != null ? hpi.getStartTime().toString() : null)
+                .endTime(hpi.getEndTime() != null ? hpi.getEndTime().toString() : null)
+                .status(hpi.getEndTime() == null ? "RUNNING" : "COMPLETED")
                 .tenantId(hpi.getTenantId())
+                .suspended(false) // Historic instances are always not suspended
                 .name(hpi.getName())
                 .description(hpi.getDescription())
                 .build();
     }
 
     /**
-     * Convert HistoricTaskInstance to HistoricTaskInstanceDto using builder pattern
+     * Convert HistoricTaskInstance to TaskDto (reusing TaskDto for historic tasks)
      */
-    public static HistoricTaskInstanceDto toHistoricTaskInstanceDto(HistoricTaskInstance hti) {
-        return HistoricTaskInstanceDto.builder()
+    public static TaskDto toTaskDto(HistoricTaskInstance hti) {
+        return TaskDto.builder()
                 .id(hti.getId())
                 .name(hti.getName())
                 .description(hti.getDescription())
@@ -138,6 +140,7 @@ public final class DtoMapper {
                 .owner(hti.getOwner())
                 .processInstanceId(hti.getProcessInstanceId())
                 .processDefinitionId(hti.getProcessDefinitionId())
+                .executionId(hti.getExecutionId())
                 .taskDefinitionKey(hti.getTaskDefinitionKey())
                 .createTime(hti.getCreateTime())
                 .endTime(hti.getEndTime())
@@ -146,6 +149,8 @@ public final class DtoMapper {
                 .category(hti.getCategory())
                 .formKey(hti.getFormKey())
                 .tenantId(hti.getTenantId())
+                .suspended("false") // Historic tasks are always not suspended
+                .state(hti.getEndTime() != null ? "COMPLETED" : "ACTIVE")
                 .build();
     }
 
@@ -183,24 +188,13 @@ public final class DtoMapper {
     }
     
     /**
-     * Convert HistoricProcessInstance to ProcessInstanceDto for admin portal
+     * Convert HistoricProcessInstance to ProcessInstanceDto for admin portal (with variables)
+     * Note: This method is kept for backward compatibility, but now uses the consolidated ProcessInstanceDto
      */
     public static ProcessInstanceDto toProcessInstanceDto(HistoricProcessInstance pi, Map<String, Object> vars) {
-        return ProcessInstanceDto.builder()
-                .id(pi.getId())
-                .processDefinitionId(pi.getProcessDefinitionId())
-                .processDefinitionKey(pi.getProcessDefinitionKey())
-                .businessKey(pi.getBusinessKey())
-                .startUserId(pi.getStartUserId())
-                .startTime(pi.getStartTime() != null ? pi.getStartTime().toString() : null)
-                .endTime(pi.getEndTime() != null ? pi.getEndTime().toString() : null)
-                .status(pi.getEndTime() == null ? "RUNNING" : "COMPLETED")
-                .variables(vars)
-                .tenantId(pi.getTenantId())
-                .suspended(false)
-                .name(pi.getName())
-                .description(pi.getDescription())
-                .build();
+        ProcessInstanceDto dto = toProcessInstanceDto(pi);
+        dto.setVariables(vars);
+        return dto;
     }
     
     /**
