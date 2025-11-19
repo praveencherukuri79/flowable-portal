@@ -33,7 +33,7 @@ public class TaskListenerUtils {
     private final ProductStagingService productStagingService;
     
     /**
-     * Generic method to handle Item staging logic
+     * Generic method to handle staging logic for Items/Plans/Products
      */
     public <T> void processItemStaging(
             DelegateTask delegateTask,
@@ -45,110 +45,27 @@ public class TaskListenerUtils {
         try {
             log.info("=== Processing {} TaskListener ===", entityType);
             
-            // Extract task info
-            String processInstanceId = delegateTask.getProcessInstanceId();
-            String taskDefinitionKey = delegateTask.getTaskDefinitionKey();
-            String formKey = delegateTask.getFormKey(); // THIS IS THE ACTUAL FORM KEY (e.g., /maker/item-edit)
-            String editedBy = delegateTask.getAssignee();
-            Object dataObj = delegateTask.getVariable(entityType.toLowerCase() + "s");
-            
-            log.info("Task Definition Key: {}", taskDefinitionKey);
-            log.info("Form Key: {}", formKey);
-            log.info("Process Instance ID: {}", processInstanceId);
-            
-            // Validate this is a maker task - TaskListener should only process maker submissions
-            // Checker tasks don't have these TaskListeners, but defensive check for formKey
-            if (formKey == null || !formKey.contains("/maker/")) {
-                log.info("⚠ Not a maker task (formKey: {}). Skipping TaskListener.", formKey);
-                return;
+            // Validate and extract task data
+            TaskContext context = extractAndValidateContext(delegateTask, entityType);
+            if (context == null) {
+                return; // Validation failed, already logged
             }
-            
-            // Check the reason for task completion - only process if reason is "submit"
-            Object reasonObj = delegateTask.getVariable("reason");
-            String reason = reasonObj != null ? reasonObj.toString() : null;
-            log.info("Task completion reason: {}", reason);
-            
-            if (!"submit".equalsIgnoreCase(reason)) {
-                log.info("⚠ Task completion reason is not 'submit' (reason: {}). Skipping data save.", reason);
-                return;
-            }
-            
-            // Validate data exists - if no data, skip processing
-            if (dataObj == null) {
-                log.info("⚠ No {} data found in process variables. Skipping TaskListener.", entityType);
-                return;
-            }
-            
-            // Validate required fields
-            ValidationUtils.requireNonEmpty(processInstanceId, "ProcessInstanceId is required");
-            
-            if (editedBy == null || editedBy.isEmpty()) {
-                log.warn("⚠ Task assignee is null, using 'system' as default");
-                editedBy = "system";
-            }
-            
-            String variableName = formKey + "-sheetId";
             
             // Parse incoming data
-            List<T> incomingData = parseData(dataObj, typeReference);
+            List<T> incomingData = parseData(context.dataObj, typeReference);
             ValidationUtils.requireNonEmpty(incomingData, entityType + "s list cannot be empty");
-            
             log.info("Parsed {} {}", incomingData.size(), entityType.toLowerCase() + "s");
             
-            // Check if sheet exists using entityType
-            String sheetType = entityType.toLowerCase(); // item, plan, or product
-            java.util.Optional<SheetDto> existingSheetOpt = sheetService.findSheetByProcessAndType(processInstanceId, sheetType);
+            // Process based on whether sheet exists
+            String sheetType = entityType.toLowerCase();
+            java.util.Optional<SheetDto> existingSheetOpt = sheetService.findSheetByProcessAndType(
+                    context.processInstanceId, sheetType);
             
             if (existingSheetOpt.isPresent()) {
-                // Existing sheet found - create new version
-                SheetDto existingSheet = existingSheetOpt.get();
-                String existingSheetId = existingSheet.getSheetId();
-                log.info("✓ Found existing sheet: {} (version {}). Creating new version.", 
-                        existingSheetId, existingSheet.getVersion());
-                
-                // Load existing data for comparison
-                List<T> existingData = loadExistingData(existingSheetId, entityType);
-                log.info("✓ Loaded {} existing {} for comparison", existingData.size(), entityType.toLowerCase() + "s");
-                
-                // Create new sheet with incremented version
-                SheetDto newSheet = sheetService.createSheet(processInstanceId, sheetType, editedBy);
-                String newSheetId = newSheet.getSheetId();
-                log.info("✓ Created new sheet: {} (version {})", newSheetId, newSheet.getVersion());
-                
-                // Process incoming data: compare with existing, set approval status, and set sheetId in one step
-                LocalDateTime now = LocalDateTime.now();
-                for (T incoming : incomingData) {
-                    // Find matching existing item by comparing business data
-                    T matchingExisting = findMatching(existingData, incoming, hasChangedPredicate);
-                    
-                    if (matchingExisting != null && !hasChangedPredicate.test(matchingExisting, incoming)) {
-                        // Data unchanged - preserve approval info
-                        copyApprovalInfo(matchingExisting, incoming);
-                        log.debug("✓ Preserved approval for unchanged {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
-                    } else {
-                        // Data changed or new - clear approval
-                        clearApproval(incoming);
-                        if (matchingExisting != null) {
-                            log.info("✓ Revoked approval for changed {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
-                        } else {
-                            log.info("✓ New {} added: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
-                        }
-                    }
-                    
-                    // Set metadata including sheetId
-                    setBasicMetadata(incoming, newSheetId, editedBy, now);
-                }
-                
-                // Save new incoming data to new sheetId (old data already preserved in old sheetId)
-                saveData(incomingData, entityType);
-                log.info("✓ Saved {} new {} for sheet {}", incomingData.size(), entityType.toLowerCase() + "s", newSheetId);
-                
-                // Update process variable with new sheetId
-                delegateTask.setVariable(variableName, newSheetId);
+                processResubmission(delegateTask, existingSheetOpt.get(), incomingData, context, 
+                        entityType, sheetType, hasChangedPredicate, getNameFunction);
             } else {
-                // Create new sheet (first submission)
-                log.info("✓ Creating new sheet for process");
-                createNewSheet(delegateTask, incomingData, editedBy, sheetType, variableName, entityType);
+                processFirstSubmission(delegateTask, incomingData, context, entityType, sheetType);
             }
             
             log.info("=== {} TaskListener END ===", entityType);
@@ -156,6 +73,170 @@ public class TaskListenerUtils {
         } catch (Exception e) {
             log.error("✗ Error in {} TaskListener", entityType, e);
             throw new RuntimeException("Failed to save " + entityType.toLowerCase() + "s: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Extract and validate task context
+     */
+    private TaskContext extractAndValidateContext(DelegateTask delegateTask, String entityType) {
+        String processInstanceId = delegateTask.getProcessInstanceId();
+        String formKey = delegateTask.getFormKey();
+        String editedBy = delegateTask.getAssignee();
+        Object dataObj = delegateTask.getVariable(entityType.toLowerCase() + "s");
+        Object reasonObj = delegateTask.getVariable("reason");
+        String reason = reasonObj != null ? reasonObj.toString() : null;
+        
+        log.info("Process Instance ID: {}", processInstanceId);
+        log.info("Form Key: {}", formKey);
+        log.info("Task completion reason: {}", reason);
+        
+        // Validate maker task
+        if (formKey == null || !formKey.contains("/maker/")) {
+            log.info("⚠ Not a maker task (formKey: {}). Skipping TaskListener.", formKey);
+            return null;
+        }
+        
+        // Validate submit reason
+        if (!"submit".equalsIgnoreCase(reason)) {
+            log.info("⚠ Task completion reason is not 'submit' (reason: {}). Skipping data save.", reason);
+            return null;
+        }
+        
+        // Validate data exists
+        if (dataObj == null) {
+            log.info("⚠ No {} data found in process variables. Skipping TaskListener.", entityType);
+            return null;
+        }
+        
+        // Validate required fields
+        ValidationUtils.requireNonEmpty(processInstanceId, "ProcessInstanceId is required");
+        
+        if (editedBy == null || editedBy.isEmpty()) {
+            log.warn("⚠ Task assignee is null, using 'system' as default");
+            editedBy = "system";
+        }
+        
+        return new TaskContext(processInstanceId, formKey, editedBy, dataObj);
+    }
+    
+    /**
+     * Process first submission - create new sheet
+     */
+    private <T> void processFirstSubmission(
+            DelegateTask delegateTask,
+            List<T> incomingData,
+            TaskContext context,
+            String entityType,
+            String sheetType) {
+        
+        log.info("✓ Creating new sheet for process");
+        
+        SheetDto sheet = sheetService.createSheet(context.processInstanceId, sheetType, context.editedBy);
+        String sheetId = sheet.getSheetId();
+        String variableName = context.formKey + "-sheetId";
+        
+        log.info("✓ Created new sheet: {} for type: {}", sheetId, sheetType);
+        
+        // Set metadata and save
+        LocalDateTime now = LocalDateTime.now();
+        for (T item : incomingData) {
+            setMetadata(item, sheetId, context.editedBy, now, false, null, null, "PENDING");
+        }
+        
+        saveData(incomingData, entityType);
+        delegateTask.setVariable(variableName, sheetId);
+        
+        log.info("✓ Saved {} new {} for sheet {}", incomingData.size(), entityType.toLowerCase() + "s", sheetId);
+    }
+    
+    /**
+     * Process resubmission - create new version with approval preservation
+     */
+    private <T> void processResubmission(
+            DelegateTask delegateTask,
+            SheetDto existingSheet,
+            List<T> incomingData,
+            TaskContext context,
+            String entityType,
+            String sheetType,
+            BiPredicate<T, T> hasChangedPredicate,
+            Function<T, String> getNameFunction) {
+        
+        String existingSheetId = existingSheet.getSheetId();
+        log.info("✓ Found existing sheet: {} (version {}). Creating new version.", 
+                existingSheetId, existingSheet.getVersion());
+        
+        // Load existing data for comparison
+        List<T> existingData = loadExistingData(existingSheetId, entityType);
+        log.info("✓ Loaded {} existing {} for comparison", existingData.size(), entityType.toLowerCase() + "s");
+        
+        // Create new sheet with incremented version
+        SheetDto newSheet = sheetService.createSheet(context.processInstanceId, sheetType, context.editedBy);
+        String newSheetId = newSheet.getSheetId();
+        log.info("✓ Created new sheet: {} (version {})", newSheetId, newSheet.getVersion());
+        
+        // Process each incoming item: compare, preserve approval if unchanged, set metadata
+        LocalDateTime now = LocalDateTime.now();
+        for (T incoming : incomingData) {
+            processIncomingItem(incoming, existingData, newSheetId, context.editedBy, now,
+                    entityType, hasChangedPredicate, getNameFunction);
+        }
+        
+        // Save and update process variable
+        saveData(incomingData, entityType);
+        delegateTask.setVariable(context.formKey + "-sheetId", newSheetId);
+        
+        log.info("✓ Saved {} new {} for sheet {}", incomingData.size(), entityType.toLowerCase() + "s", newSheetId);
+    }
+    
+    /**
+     * Process a single incoming item: compare with existing, preserve approval if unchanged
+     */
+    private <T> void processIncomingItem(
+            T incoming,
+            List<T> existingData,
+            String newSheetId,
+            String editedBy,
+            LocalDateTime now,
+            String entityType,
+            BiPredicate<T, T> hasChangedPredicate,
+            Function<T, String> getNameFunction) {
+        
+        T matchingExisting = findMatching(existingData, incoming, hasChangedPredicate);
+        
+        if (matchingExisting != null && !hasChangedPredicate.test(matchingExisting, incoming)) {
+            // Data unchanged - preserve approval info
+            copyApprovalInfo(matchingExisting, incoming);
+            log.debug("✓ Preserved approval for unchanged {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
+        } else {
+            // Data changed or new - clear approval
+            clearApproval(incoming);
+            if (matchingExisting != null) {
+                log.info("✓ Revoked approval for changed {}: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
+            } else {
+                log.info("✓ New {} added: {}", entityType.toLowerCase(), getNameFunction.apply(incoming));
+            }
+        }
+        
+        // Set metadata including sheetId
+        setBasicMetadata(incoming, newSheetId, editedBy, now);
+    }
+    
+    /**
+     * Context class to hold task information
+     */
+    private static class TaskContext {
+        final String processInstanceId;
+        final String formKey;
+        final String editedBy;
+        final Object dataObj;
+        
+        TaskContext(String processInstanceId, String formKey, String editedBy, Object dataObj) {
+            this.processInstanceId = processInstanceId;
+            this.formKey = formKey;
+            this.editedBy = editedBy;
+            this.dataObj = dataObj;
         }
     }
     
@@ -171,36 +252,6 @@ public class TaskListenerUtils {
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse data", e);
         }
-    }
-    
-    private <T> void createNewSheet(
-            DelegateTask delegateTask,
-            List<T> data,
-            String editedBy,
-            String sheetType,
-            String variableName,
-            String entityType) {
-        
-        String processInstanceId = delegateTask.getProcessInstanceId();
-        
-        // Create new sheet with sheetType (item, plan, or product)
-        SheetDto sheet = sheetService.createSheet(processInstanceId, sheetType, editedBy);
-        String sheetId = sheet.getSheetId();
-        log.info("✓ Created new sheet: {} for type: {}", sheetId, sheetType);
-        
-        // Store sheetId in process variables
-        delegateTask.setVariable(variableName, sheetId);
-        log.info("✓ Stored process variable: {} = {}", variableName, sheetId);
-        
-        // Set metadata for all items
-        LocalDateTime now = LocalDateTime.now();
-        for (T item : data) {
-            setMetadata(item, sheetId, editedBy, now, false, null, null, "PENDING");
-        }
-        
-        // Save data
-        saveData(data, entityType);
-        log.info("✓ Saved {} new {}", data.size(), entityType.toLowerCase() + "s");
     }
     
     @SuppressWarnings("unchecked")
