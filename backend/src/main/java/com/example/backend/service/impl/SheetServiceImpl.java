@@ -40,6 +40,7 @@ public class SheetServiceImpl implements SheetService {
                 .processInstanceId(processInstanceId)
                 .version(nextVersion)
                 .createdBy(createdBy)
+                .editedBy(createdBy) // Initially, creator is also the editor
                 .createdAt(LocalDateTime.now())
                 .status("PENDING")
                 .build();
@@ -67,6 +68,7 @@ public class SheetServiceImpl implements SheetService {
         sheet.setApprovedBy(approvedBy);
         sheet.setApprovedAt(LocalDateTime.now());
         sheet.setStatus("APPROVED");
+        sheet.setEditedBy(approvedBy); // The approver is editing/updating the sheet
         if (comments != null) {
             sheet.setComments(comments);
         }
@@ -125,6 +127,7 @@ public class SheetServiceImpl implements SheetService {
         dto.setProcessInstanceId(sheet.getProcessInstanceId());
         dto.setVersion(sheet.getVersion());
         dto.setCreatedBy(sheet.getCreatedBy());
+        dto.setEditedBy(sheet.getEditedBy());
         dto.setCreatedAt(sheet.getCreatedAt());
         dto.setApprovedBy(sheet.getApprovedBy());
         dto.setApprovedAt(sheet.getApprovedAt());

@@ -139,9 +139,10 @@ public class TaskListenerUtils {
         log.info("✓ Created new sheet: {} for type: {}", sheetId, sheetType);
         
         // Set metadata and save
+        // For first submission, createdBy = editedBy (same user creating the record)
         LocalDateTime now = LocalDateTime.now();
         for (T item : incomingData) {
-            setMetadata(item, sheetId, context.editedBy, now, false, null, null, "PENDING");
+            setMetadata(item, sheetId, context.editedBy, context.editedBy, now, false, null, null, "PENDING");
         }
         
         saveData(incomingData, entityType);
@@ -205,6 +206,16 @@ public class TaskListenerUtils {
         
         T matchingExisting = findMatching(existingData, incoming, hasChangedPredicate);
         
+        // Preserve createdBy if item exists, otherwise set to current user
+        String createdBy = editedBy; // Default: current user created it
+        if (matchingExisting != null) {
+            // Item exists - preserve original createdBy, fallback to editedBy if null
+            String existingCreatedBy = getCreatedBy(matchingExisting);
+            if (existingCreatedBy != null && !existingCreatedBy.isEmpty()) {
+                createdBy = existingCreatedBy;
+            }
+        }
+        
         if (matchingExisting != null && !hasChangedPredicate.test(matchingExisting, incoming)) {
             // Data unchanged - preserve approval info
             copyApprovalInfo(matchingExisting, incoming);
@@ -219,8 +230,8 @@ public class TaskListenerUtils {
             }
         }
         
-        // Set metadata including sheetId
-        setBasicMetadata(incoming, newSheetId, editedBy, now);
+        // Set metadata including sheetId, createdBy, and editedBy
+        setBasicMetadata(incoming, newSheetId, createdBy, editedBy, now);
     }
     
     /**
@@ -293,11 +304,12 @@ public class TaskListenerUtils {
         return null;
     }
     
-    private <T> void setMetadata(T item, String sheetId, String editedBy, LocalDateTime editedAt, 
+    private <T> void setMetadata(T item, String sheetId, String createdBy, String editedBy, LocalDateTime editedAt, 
                                   Boolean approved, String approvedBy, LocalDateTime approvedAt, String status) {
         if (item instanceof ItemStagingDto) {
             ItemStagingDto dto = (ItemStagingDto) item;
             dto.setSheetId(sheetId);
+            dto.setCreatedBy(createdBy);
             dto.setEditedBy(editedBy);
             dto.setEditedAt(editedAt);
             dto.setApproved(approved);
@@ -307,6 +319,7 @@ public class TaskListenerUtils {
         } else if (item instanceof PlanStagingDto) {
             PlanStagingDto dto = (PlanStagingDto) item;
             dto.setSheetId(sheetId);
+            dto.setCreatedBy(createdBy);
             dto.setEditedBy(editedBy);
             dto.setEditedAt(editedAt);
             dto.setApproved(approved);
@@ -316,6 +329,7 @@ public class TaskListenerUtils {
         } else if (item instanceof ProductStagingDto) {
             ProductStagingDto dto = (ProductStagingDto) item;
             dto.setSheetId(sheetId);
+            dto.setCreatedBy(createdBy);
             dto.setEditedBy(editedBy);
             dto.setEditedAt(editedAt);
             dto.setApproved(approved);
@@ -325,23 +339,40 @@ public class TaskListenerUtils {
         }
     }
     
-    private <T> void setBasicMetadata(T item, String sheetId, String editedBy, LocalDateTime editedAt) {
+    private <T> void setBasicMetadata(T item, String sheetId, String createdBy, String editedBy, LocalDateTime editedAt) {
         if (item instanceof ItemStagingDto) {
             ItemStagingDto dto = (ItemStagingDto) item;
             dto.setSheetId(sheetId);
+            dto.setCreatedBy(createdBy);
             dto.setEditedBy(editedBy);
             dto.setEditedAt(editedAt);
         } else if (item instanceof PlanStagingDto) {
             PlanStagingDto dto = (PlanStagingDto) item;
             dto.setSheetId(sheetId);
+            dto.setCreatedBy(createdBy);
             dto.setEditedBy(editedBy);
             dto.setEditedAt(editedAt);
         } else if (item instanceof ProductStagingDto) {
             ProductStagingDto dto = (ProductStagingDto) item;
             dto.setSheetId(sheetId);
+            dto.setCreatedBy(createdBy);
             dto.setEditedBy(editedBy);
             dto.setEditedAt(editedAt);
         }
+    }
+    
+    /**
+     * Get createdBy from existing item
+     */
+    private <T> String getCreatedBy(T item) {
+        if (item instanceof ItemStagingDto) {
+            return ((ItemStagingDto) item).getCreatedBy();
+        } else if (item instanceof PlanStagingDto) {
+            return ((PlanStagingDto) item).getCreatedBy();
+        } else if (item instanceof ProductStagingDto) {
+            return ((ProductStagingDto) item).getCreatedBy();
+        }
+        return null;
     }
     
     private <T> void copyApprovalInfo(T source, T target) {

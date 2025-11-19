@@ -51,9 +51,12 @@ public class PlanStagingServiceImpl implements PlanStagingService {
         PlanStaging plan = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan not found with id: " + id));
         
+        LocalDateTime now = LocalDateTime.now();
         plan.setApproved(true);
         plan.setApprovedBy(approverUsername);
-        plan.setApprovedAt(LocalDateTime.now());
+        plan.setApprovedAt(now);
+        plan.setEditedBy(approverUsername); // Approver is editing the record (approval status)
+        plan.setEditedAt(now);
         plan.setStatus("APPROVED");
         repository.save(plan);
         
@@ -80,6 +83,8 @@ public class PlanStagingServiceImpl implements PlanStagingService {
             plan.setApproved(true);
             plan.setApprovedBy(approverUsername);
             plan.setApprovedAt(now);
+            plan.setEditedBy(approverUsername); // Approver is editing the record (approval status)
+            plan.setEditedAt(now);
             plan.setStatus("APPROVED");
         });
         repository.saveAll(plans);
@@ -111,6 +116,7 @@ public class PlanStagingServiceImpl implements PlanStagingService {
                 .approved(entity.getApproved())
                 .approvedBy(entity.getApprovedBy())
                 .approvedAt(entity.getApprovedAt())
+                .createdBy(entity.getCreatedBy())
                 .editedBy(entity.getEditedBy())
                 .editedAt(entity.getEditedAt())
                 .comments(entity.getComments())
@@ -130,6 +136,7 @@ public class PlanStagingServiceImpl implements PlanStagingService {
                 .approved(dto.getApproved())
                 .approvedBy(dto.getApprovedBy())
                 .approvedAt(dto.getApprovedAt())
+                .createdBy(dto.getCreatedBy())
                 .editedBy(dto.getEditedBy())
                 .editedAt(dto.getEditedAt())
                 .comments(dto.getComments())

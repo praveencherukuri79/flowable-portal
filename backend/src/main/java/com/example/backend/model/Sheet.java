@@ -39,7 +39,10 @@ public class Sheet {
     private Integer version = 1; // Version increments for each submission of same processInstanceId + sheetType
     
     @Column(nullable = false)
-    private String createdBy;
+    private String createdBy; // User who first created this sheet
+    
+    @Column
+    private String editedBy; // User who last edited this sheet
     
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -57,20 +60,11 @@ public class Sheet {
     @Column
     private String comments;
     
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-    
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
-        updatedAt = LocalDateTime.now();
-    }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 }
 

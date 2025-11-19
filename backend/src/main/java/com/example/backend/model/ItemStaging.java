@@ -54,7 +54,10 @@ public class ItemStaging {
     private LocalDateTime approvedAt;
     
     @Column
-    private String editedBy;
+    private String createdBy; // User who first created this record
+    
+    @Column
+    private String editedBy; // User who last edited this record
     
     @Column
     private LocalDateTime editedAt;
@@ -65,21 +68,12 @@ public class ItemStaging {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
         if (status == null) {
             status = "PENDING";
         }
-    }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 }
 

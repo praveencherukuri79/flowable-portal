@@ -23,7 +23,8 @@ public class ProductStagingDto {
     private Boolean approved;
     private String approvedBy;
     private LocalDateTime approvedAt;
-    private String editedBy;
+    private String createdBy; // User who first created this record
+    private String editedBy; // User who last edited this record
     private LocalDateTime editedAt;
     private String comments;
 }

@@ -51,9 +51,12 @@ public class ItemStagingServiceImpl implements ItemStagingService {
         ItemStaging item = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item not found with id: " + id));
         
+        LocalDateTime now = LocalDateTime.now();
         item.setApproved(true);
         item.setApprovedBy(approverUsername);
-        item.setApprovedAt(LocalDateTime.now());
+        item.setApprovedAt(now);
+        item.setEditedBy(approverUsername); // Approver is editing the record (approval status)
+        item.setEditedAt(now);
         item.setStatus("APPROVED");
         repository.save(item);
         
@@ -80,6 +83,8 @@ public class ItemStagingServiceImpl implements ItemStagingService {
             item.setApproved(true);
             item.setApprovedBy(approverUsername);
             item.setApprovedAt(now);
+            item.setEditedBy(approverUsername); // Approver is editing the record (approval status)
+            item.setEditedAt(now);
             item.setStatus("APPROVED");
         });
         repository.saveAll(items);
@@ -111,6 +116,7 @@ public class ItemStagingServiceImpl implements ItemStagingService {
                 .approved(entity.getApproved())
                 .approvedBy(entity.getApprovedBy())
                 .approvedAt(entity.getApprovedAt())
+                .createdBy(entity.getCreatedBy())
                 .editedBy(entity.getEditedBy())
                 .editedAt(entity.getEditedAt())
                 .comments(entity.getComments())
@@ -130,6 +136,7 @@ public class ItemStagingServiceImpl implements ItemStagingService {
                 .approved(dto.getApproved())
                 .approvedBy(dto.getApprovedBy())
                 .approvedAt(dto.getApprovedAt())
+                .createdBy(dto.getCreatedBy())
                 .editedBy(dto.getEditedBy())
                 .editedAt(dto.getEditedAt())
                 .comments(dto.getComments())

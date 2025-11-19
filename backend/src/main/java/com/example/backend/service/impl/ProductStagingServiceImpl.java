@@ -51,9 +51,12 @@ public class ProductStagingServiceImpl implements ProductStagingService {
         ProductStaging product = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
+        LocalDateTime now = LocalDateTime.now();
         product.setApproved(true);
         product.setApprovedBy(approverUsername);
-        product.setApprovedAt(LocalDateTime.now());
+        product.setApprovedAt(now);
+        product.setEditedBy(approverUsername); // Approver is editing the record (approval status)
+        product.setEditedAt(now);
         product.setStatus("APPROVED");
         repository.save(product);
         
@@ -80,6 +83,8 @@ public class ProductStagingServiceImpl implements ProductStagingService {
             product.setApproved(true);
             product.setApprovedBy(approverUsername);
             product.setApprovedAt(now);
+            product.setEditedBy(approverUsername); // Approver is editing the record (approval status)
+            product.setEditedAt(now);
             product.setStatus("APPROVED");
         });
         repository.saveAll(products);
@@ -110,6 +115,7 @@ public class ProductStagingServiceImpl implements ProductStagingService {
                 .approved(entity.getApproved())
                 .approvedBy(entity.getApprovedBy())
                 .approvedAt(entity.getApprovedAt())
+                .createdBy(entity.getCreatedBy())
                 .editedBy(entity.getEditedBy())
                 .editedAt(entity.getEditedAt())
                 .comments(entity.getComments())
@@ -128,6 +134,7 @@ public class ProductStagingServiceImpl implements ProductStagingService {
                 .approved(dto.getApproved())
                 .approvedBy(dto.getApprovedBy())
                 .approvedAt(dto.getApprovedAt())
+                .createdBy(dto.getCreatedBy())
                 .editedBy(dto.getEditedBy())
                 .editedAt(dto.getEditedAt())
                 .comments(dto.getComments())
