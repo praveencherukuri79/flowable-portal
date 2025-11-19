@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, CardContent, Typography } from '@mui/material'
+import { Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TablePagination } from '@mui/material'
 import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import { adminApi, ProcessInstance } from '../../api/adminApi'
 import dayjs from '../../utils/dayjs'
@@ -46,7 +46,9 @@ export default function InstancesPage() {
         <Typography variant="h6" gutterBottom>
           Process Instances
         </Typography>
-        <div style={{ height: 560 }}>
+        
+        {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+        {/* <div style={{ height: 560 }}>
           <DataGrid
             rows={rows}
             columns={columns}
@@ -62,7 +64,48 @@ export default function InstancesPage() {
             }}
             pageSizeOptions={[10, 25, 50, 100]}
           />
-        </div>
+        </div> */}
+        
+        {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Instance ID</strong></TableCell>
+                <TableCell><strong>Definition</strong></TableCell>
+                <TableCell><strong>Business Key</strong></TableCell>
+                <TableCell><strong>State</strong></TableCell>
+                <TableCell><strong>Start Time</strong></TableCell>
+                <TableCell><strong>End Time</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.id} hover>
+                  <TableCell>{row.id}</TableCell>
+                  <TableCell>{row.definitionKey}</TableCell>
+                  <TableCell>{row.businessKey}</TableCell>
+                  <TableCell>{row.state}</TableCell>
+                  <TableCell>
+                    {row.startTime ? dayjs(row.startTime).format('YYYY-MM-DD HH:mm:ss') : ''}
+                  </TableCell>
+                  <TableCell>
+                    {row.endTime ? dayjs(row.endTime).format('YYYY-MM-DD HH:mm:ss') : ''}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={pageSize}
+            onRowsPerPageChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+          />
+        </TableContainer>
       </CardContent>
     </Card>
   )

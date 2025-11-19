@@ -4,6 +4,13 @@ import {
   CardContent,
   TextField,
   Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material'
 import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import { adminApi, ProcessDefinition } from '../../api/adminApi'
@@ -40,14 +47,40 @@ export default function DefinitionsPage() {
           onChange={(e) => setQ(e.target.value)}
           sx={{ mb: 2 }}
         />
-        <div style={{ height: 520 }}>
+        
+        {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+        {/* <div style={{ height: 520 }}>
           <DataGrid
             rows={filtered}
             columns={columns}
             getRowId={(r) => r.id}
             disableRowSelectionOnClick
           />
-        </div>
+        </div> */}
+        
+        {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+        <TableContainer component={Paper} sx={{ maxHeight: 520 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Key</strong></TableCell>
+                <TableCell><strong>Name</strong></TableCell>
+                <TableCell><strong>Version</strong></TableCell>
+                <TableCell><strong>Deployment</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filtered.map((row) => (
+                <TableRow key={row.id} hover>
+                  <TableCell>{row.key}</TableCell>
+                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{row.version}</TableCell>
+                  <TableCell>{row.deploymentId}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </CardContent>
     </Card>
   )

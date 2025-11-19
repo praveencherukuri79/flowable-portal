@@ -15,7 +15,15 @@ import {
   Snackbar,
   Chip,
   MenuItem,
-  IconButton
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TablePagination
 } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
@@ -38,6 +46,8 @@ export const UserManagement: React.FC = () => {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState('MAKER')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const loadUsers = async () => {
     try {
@@ -210,7 +220,8 @@ export const UserManagement: React.FC = () => {
             </Button>
           </Box>
 
-          <DataGrid
+          {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+          {/* <DataGrid
             rows={users}
             columns={columns}
             initialState={{
@@ -220,7 +231,79 @@ export const UserManagement: React.FC = () => {
             }}
             pageSizeOptions={[5, 10, 25]}
             autoHeight
-          />
+          /> */}
+          
+          {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>ID</strong></TableCell>
+                  <TableCell><strong>Username</strong></TableCell>
+                  <TableCell><strong>Full Name</strong></TableCell>
+                  <TableCell><strong>Email</strong></TableCell>
+                  <TableCell><strong>Role</strong></TableCell>
+                  <TableCell><strong>Status</strong></TableCell>
+                  <TableCell><strong>Actions</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((user) => (
+                  <TableRow key={user.id} hover>
+                    <TableCell>{user.id}</TableCell>
+                    <TableCell>{user.username}</TableCell>
+                    <TableCell>{user.fullName}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={user.role}
+                        color={
+                          user.role === 'ADMIN' ? 'error' :
+                          user.role === 'CHECKER' ? 'warning' :
+                          'primary'
+                        }
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={user.enabled ? 'Active' : 'Disabled'}
+                        color={user.enabled ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenEditDialog(user)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(user.id)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={users.length}
+              page={page}
+              onPageChange={(_, newPage) => setPage(newPage)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10))
+                setPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
+          </TableContainer>
         </CardContent>
       </Card>
 

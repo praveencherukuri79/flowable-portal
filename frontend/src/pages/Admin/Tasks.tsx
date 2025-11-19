@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, CardContent, Typography, Chip, Button, Snackbar, Alert, Divider } from '@mui/material'
+import { Card, CardContent, Typography, Chip, Button, Snackbar, Alert, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TablePagination } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import { useNavigate } from 'react-router-dom'
 import { flowableApi, TaskDto } from '../../api/flowableApi'
@@ -17,6 +17,10 @@ export default function TasksPage() {
   const [allTotal, setAllTotal] = React.useState(0)
   const [allPage, setAllPage] = React.useState(0)
   const [allPageSize, setAllPageSize] = React.useState(25)
+  
+  // Table pagination states
+  const [adminTablePage, setAdminTablePage] = React.useState(0)
+  const [adminTableRowsPerPage, setAdminTableRowsPerPage] = React.useState(5)
   
   const [error, setError] = React.useState('')
   const [success, setSuccess] = React.useState('')
@@ -161,7 +165,9 @@ export default function TasksPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Tasks assigned to ADMIN group that you can claim and complete
           </Typography>
-          <div style={{ height: 400 }}>
+          
+          {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+          {/* <div style={{ height: 400 }}>
             <DataGrid
               rows={adminTasks}
               columns={adminColumns}
@@ -174,7 +180,76 @@ export default function TasksPage() {
                 pagination: { paginationModel: { pageSize: 5 } },
               }}
             />
-          </div>
+          </div> */}
+          
+          {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Task ID</strong></TableCell>
+                  <TableCell><strong>Task Name</strong></TableCell>
+                  <TableCell><strong>Status</strong></TableCell>
+                  <TableCell><strong>Process Instance</strong></TableCell>
+                  <TableCell><strong>Created</strong></TableCell>
+                  <TableCell><strong>Actions</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {adminTasks.slice(adminTablePage * adminTableRowsPerPage, adminTablePage * adminTableRowsPerPage + adminTableRowsPerPage).map((task) => (
+                  <TableRow key={task.id} hover>
+                    <TableCell>{task.id}</TableCell>
+                    <TableCell>{task.name}</TableCell>
+                    <TableCell>
+                      {task.assignee ? (
+                        <Chip label="Assigned" color="success" size="small" />
+                      ) : (
+                        <Chip label="Claimable" color="default" size="small" />
+                      )}
+                    </TableCell>
+                    <TableCell>{task.processInstanceId}</TableCell>
+                    <TableCell>
+                      {task.createTime ? dayjs(task.createTime).format('YYYY-MM-DD HH:mm') : ''}
+                    </TableCell>
+                    <TableCell>
+                      {!task.assignee ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<LockOpenIcon />}
+                          onClick={() => handleClaim(task.id)}
+                        >
+                          Claim
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<PlayArrowIcon />}
+                          onClick={() => handleOpen(task)}
+                          disabled={!task.formKey}
+                        >
+                          Open
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={adminTasks.length}
+              page={adminTablePage}
+              onPageChange={(_, newPage) => setAdminTablePage(newPage)}
+              rowsPerPage={adminTableRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setAdminTableRowsPerPage(parseInt(e.target.value, 10))
+                setAdminTablePage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
+          </TableContainer>
         </CardContent>
       </Card>
 
@@ -189,7 +264,9 @@ export default function TasksPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Complete view of all tasks across MAKER, CHECKER, and ADMIN groups
           </Typography>
-          <div style={{ height: 500 }}>
+          
+          {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+          {/* <div style={{ height: 500 }}>
             <DataGrid
               rows={allTasks}
               columns={allColumns}
@@ -205,7 +282,55 @@ export default function TasksPage() {
               }}
               pageSizeOptions={[10, 25, 50, 100]}
             />
-          </div>
+          </div> */}
+          
+          {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Task ID</strong></TableCell>
+                  <TableCell><strong>Name</strong></TableCell>
+                  <TableCell><strong>Assignee</strong></TableCell>
+                  <TableCell><strong>Process Instance</strong></TableCell>
+                  <TableCell><strong>Created</strong></TableCell>
+                  <TableCell><strong>State</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {allTasks.map((task) => (
+                  <TableRow key={task.id} hover>
+                    <TableCell>{task.id}</TableCell>
+                    <TableCell>{task.name}</TableCell>
+                    <TableCell>{task.assignee}</TableCell>
+                    <TableCell>{task.processInstanceId}</TableCell>
+                    <TableCell>
+                      {task.createTime ? dayjs(task.createTime).format('YYYY-MM-DD HH:mm') : ''}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={task.state}
+                        color={task.state === 'CLAIMABLE' ? 'info' : 'success'}
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={allTotal}
+              page={allPage}
+              onPageChange={(_, newPage) => setAllPage(newPage)}
+              rowsPerPage={allPageSize}
+              onRowsPerPageChange={(e) => {
+                setAllPageSize(parseInt(e.target.value, 10))
+                setAllPage(0)
+              }}
+              rowsPerPageOptions={[10, 25, 50, 100]}
+            />
+          </TableContainer>
         </CardContent>
       </Card>
       

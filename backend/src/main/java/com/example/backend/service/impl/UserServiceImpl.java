@@ -27,11 +27,23 @@ public class UserServiceImpl implements UserService {
     @Override
     public AuthResponse login(AuthRequest request) {
         try {
+            // Trim username and password to handle whitespace issues
+            String username = request.getUsername() != null ? request.getUsername().trim() : null;
+            String password = request.getPassword() != null ? request.getPassword() : null;
+            
+            if (username == null || username.isEmpty()) {
+                throw new RuntimeException("Username is required");
+            }
+            
+            if (password == null || password.isEmpty()) {
+                throw new RuntimeException("Password is required");
+            }
+            
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(username, password)
             );
             
-            User user = userRepository.findByUsername(request.getUsername())
+            User user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
             String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());

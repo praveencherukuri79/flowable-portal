@@ -8,7 +8,15 @@ import {
   Alert,
   Button,
   Chip,
-  Snackbar
+  Snackbar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TablePagination
 } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import { useNavigate } from 'react-router-dom'
@@ -22,6 +30,8 @@ export const MyTasks: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const navigate = useNavigate()
 
   const loadTasks = async () => {
@@ -133,7 +143,8 @@ export const MyTasks: React.FC = () => {
             Assigned tasks and claimable tasks from your candidate group
           </Typography>
 
-          <DataGrid
+          {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+          {/* <DataGrid
             rows={tasks}
             columns={columns}
             initialState={{
@@ -143,7 +154,72 @@ export const MyTasks: React.FC = () => {
             }}
             pageSizeOptions={[5, 10, 25]}
             autoHeight
-          />
+          /> */}
+          
+          {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Task Name</strong></TableCell>
+                  <TableCell><strong>Created</strong></TableCell>
+                  <TableCell><strong>Status</strong></TableCell>
+                  <TableCell><strong>Actions</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {tasks.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((task) => (
+                  <TableRow key={task.id} hover>
+                    <TableCell>{task.name}</TableCell>
+                    <TableCell>
+                      {task.createTime ? dayjs(task.createTime).format('YYYY-MM-DD HH:mm:ss') : ''}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={task.assignee ? 'Assigned' : 'Claimable'}
+                        color={task.assignee ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {!task.assignee ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<LockOpenIcon />}
+                          onClick={() => handleClaim(task.id)}
+                        >
+                          Claim
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<PlayArrowIcon />}
+                          onClick={() => handleOpen(task)}
+                          disabled={!task.formKey}
+                        >
+                          Open
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={tasks.length}
+              page={page}
+              onPageChange={(_, newPage) => setPage(newPage)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10))
+                setPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
+          </TableContainer>
         </CardContent>
       </Card>
 

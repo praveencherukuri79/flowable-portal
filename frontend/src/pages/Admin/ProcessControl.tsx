@@ -13,7 +13,15 @@ import {
   DialogActions,
   TextField,
   Chip,
-  IconButton
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TablePagination
 } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
@@ -49,6 +57,12 @@ export function ProcessControl() {
   // Instance Details
   const [selectedInstance, setSelectedInstance] = useState<ProcessInstance | null>(null)
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false)
+  
+  // Table pagination states
+  const [defTablePage, setDefTablePage] = useState(0)
+  const [defTableRowsPerPage, setDefTableRowsPerPage] = useState(5)
+  const [instTablePage, setInstTablePage] = useState(0)
+  const [instTableRowsPerPage, setInstTableRowsPerPage] = useState(5)
   
   useEffect(() => {
     loadDefinitions()
@@ -220,7 +234,9 @@ export function ProcessControl() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             All deployed process definitions. Click "Start" to create a new instance.
           </Typography>
-          <div style={{ height: 400, width: '100%' }}>
+          
+          {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+          {/* <div style={{ height: 400, width: '100%' }}>
             <DataGrid
               rows={definitions}
               columns={definitionColumns}
@@ -232,7 +248,72 @@ export function ProcessControl() {
               }}
               disableRowSelectionOnClick
             />
-          </div>
+          </div> */}
+          
+          {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Key</strong></TableCell>
+                  <TableCell><strong>Name</strong></TableCell>
+                  <TableCell><strong>Version</strong></TableCell>
+                  <TableCell><strong>Category</strong></TableCell>
+                  <TableCell><strong>Status</strong></TableCell>
+                  <TableCell><strong>Actions</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingDefinitions ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      <CircularProgress />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  definitions.slice(defTablePage * defTableRowsPerPage, defTablePage * defTableRowsPerPage + defTableRowsPerPage).map((def) => (
+                    <TableRow key={def.id} hover>
+                      <TableCell>{def.key}</TableCell>
+                      <TableCell>{def.name}</TableCell>
+                      <TableCell>{def.version}</TableCell>
+                      <TableCell>{def.category}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={def.suspended ? 'Suspended' : 'Active'}
+                          color={def.suspended ? 'warning' : 'success'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          startIcon={<PlayArrowIcon />}
+                          onClick={() => handleOpenStartDialog(def)}
+                          disabled={def.suspended}
+                        >
+                          Start
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={definitions.length}
+              page={defTablePage}
+              onPageChange={(_, newPage) => setDefTablePage(newPage)}
+              rowsPerPage={defTableRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setDefTableRowsPerPage(parseInt(e.target.value, 10))
+                setDefTablePage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
+          </TableContainer>
         </CardContent>
       </Card>
       
@@ -245,7 +326,9 @@ export function ProcessControl() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             All active and suspended process instances. Click the eye icon to view details and manage tasks.
           </Typography>
-          <div style={{ height: 400, width: '100%' }}>
+          
+          {/* ===== DATA GRID VERSION (Comment out to use Table) ===== */}
+          {/* <div style={{ height: 400, width: '100%' }}>
             <DataGrid
               rows={instances}
               columns={instanceColumns}
@@ -257,7 +340,72 @@ export function ProcessControl() {
               }}
               disableRowSelectionOnClick
             />
-          </div>
+          </div> */}
+          
+          {/* ===== MUI TABLE VERSION (Comment out to use DataGrid) ===== */}
+          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Instance ID</strong></TableCell>
+                  <TableCell><strong>Process Name</strong></TableCell>
+                  <TableCell><strong>Business Key</strong></TableCell>
+                  <TableCell><strong>Status</strong></TableCell>
+                  <TableCell><strong>Started</strong></TableCell>
+                  <TableCell><strong>Started By</strong></TableCell>
+                  <TableCell><strong>Actions</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingInstances ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      <CircularProgress />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  instances.slice(instTablePage * instTableRowsPerPage, instTablePage * instTableRowsPerPage + instTableRowsPerPage).map((inst) => (
+                    <TableRow key={inst.id} hover>
+                      <TableCell>{inst.id}</TableCell>
+                      <TableCell>{inst.name}</TableCell>
+                      <TableCell>{inst.businessKey}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={inst.status}
+                          color={inst.status === 'ACTIVE' ? 'success' : 'warning'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{inst.startTime}</TableCell>
+                      <TableCell>{inst.startUserId}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => handleViewInstance(inst)}
+                          title="View Details"
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={instances.length}
+              page={instTablePage}
+              onPageChange={(_, newPage) => setInstTablePage(newPage)}
+              rowsPerPage={instTableRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setInstTableRowsPerPage(parseInt(e.target.value, 10))
+                setInstTablePage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
+          </TableContainer>
         </CardContent>
       </Card>
       

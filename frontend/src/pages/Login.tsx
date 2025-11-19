@@ -28,7 +28,15 @@ export const Login: React.FC = () => {
     setLoading(true)
 
     try {
-      const response = await authApi.login({ username, password })
+      // Trim username to prevent whitespace issues
+      const trimmedUsername = username.trim()
+      if (!trimmedUsername) {
+        setError('Username is required')
+        setLoading(false)
+        return
+      }
+      
+      const response = await authApi.login({ username: trimmedUsername, password })
       
       // Store in localStorage
       localStorage.setItem('token', response.token)
