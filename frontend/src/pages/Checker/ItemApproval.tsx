@@ -20,6 +20,7 @@ import { flowableApi, dataQueryApi } from '../../api/flowableApi'
 import { stagingApi, ItemStaging } from '../../api/stagingApi'
 import { useRecoilValue } from 'recoil'
 import { authState } from '../../state/auth'
+import { WorkflowDecision, WorkflowDecisionValue } from '../../constants/workflowConstants'
 
 export function ItemApproval() {
   const location = useLocation()
@@ -142,7 +143,7 @@ export function ItemApproval() {
       const approverUsername = auth.username || 'checker'
       
       // Backend will approve sheet AND complete task
-      await stagingApi.approveSheet(sheetId, approverUsername, taskId, 'stage3Decision')
+      await stagingApi.approveSheet(sheetId, approverUsername, taskId, WorkflowDecision.ITEM)
       
       setSuccessMessage('Sheet approved and task completed! Redirecting...')
       setTimeout(() => navigate('/checker'), 2000)
@@ -158,7 +159,7 @@ export function ItemApproval() {
       setLoading(true)
       // Complete task with reject decision (sends back to maker)
       await flowableApi.completeTask(taskId, {
-        stage3Decision: 'REJECT'
+        [WorkflowDecision.ITEM]: WorkflowDecisionValue.REJECT
       })
       setSuccessMessage('Items rejected! Sending back to maker...')
       setTimeout(() => navigate('/checker'), 2000)

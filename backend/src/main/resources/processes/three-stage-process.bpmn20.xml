@@ -38,12 +38,12 @@
         <exclusiveGateway id="stage3Gateway" name="Items Decision"/>
         <sequenceFlow id="flow4" name="Approved" sourceRef="stage3Gateway" targetRef="stage2MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage3Decision == 'APPROVE'}
+                ${itemDecision == 'APPROVE'}
             </conditionExpression>
         </sequenceFlow>
         <sequenceFlow id="flow5" name="Rejected" sourceRef="stage3Gateway" targetRef="stage3MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage3Decision == 'REJECT'}
+                ${itemDecision == 'REJECT'}
             </conditionExpression>
         </sequenceFlow>
         
@@ -64,12 +64,12 @@
         <exclusiveGateway id="stage2MakerGateway" name="Plans Maker Decision"/>
         <sequenceFlow id="flow7" name="Forward" sourceRef="stage2MakerGateway" targetRef="stage2CheckerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${empty stage2Decision or stage2Decision != 'BACK'}
+                ${empty planDecision or planDecision != 'BACK'}
             </conditionExpression>
         </sequenceFlow>
         <sequenceFlow id="flow8" name="Back to Items" sourceRef="stage2MakerGateway" targetRef="stage3MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage2Decision == 'BACK'}
+                ${planDecision == 'BACK'}
             </conditionExpression>
         </sequenceFlow>
         
@@ -83,17 +83,17 @@
         <exclusiveGateway id="stage2CheckerGateway" name="Plans Checker Decision"/>
         <sequenceFlow id="flow10" name="Approved" sourceRef="stage2CheckerGateway" targetRef="stage1MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage2Decision == 'APPROVE'}
+                ${planDecision == 'APPROVE'}
             </conditionExpression>
         </sequenceFlow>
         <sequenceFlow id="flow11" name="Rejected" sourceRef="stage2CheckerGateway" targetRef="stage2MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage2Decision == 'REJECT'}
+                ${planDecision == 'REJECT'}
             </conditionExpression>
         </sequenceFlow>
         <sequenceFlow id="flow12" name="Back to Items" sourceRef="stage2CheckerGateway" targetRef="stage3MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage2Decision == 'BACK'}
+                ${planDecision == 'BACK'}
             </conditionExpression>
         </sequenceFlow>
         
@@ -114,12 +114,12 @@
         <exclusiveGateway id="stage1MakerGateway" name="Products Maker Decision"/>
         <sequenceFlow id="flow14" name="Forward" sourceRef="stage1MakerGateway" targetRef="stage1CheckerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${empty stage1Decision or stage1Decision != 'BACK'}
+                ${empty productDecision or productDecision != 'BACK'}
             </conditionExpression>
         </sequenceFlow>
         <sequenceFlow id="flow15" name="Back to Plans" sourceRef="stage1MakerGateway" targetRef="stage2MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage1Decision == 'BACK'}
+                ${productDecision == 'BACK'}
             </conditionExpression>
         </sequenceFlow>
         
@@ -133,17 +133,17 @@
         <exclusiveGateway id="stage1CheckerGateway" name="Products Checker Decision"/>
         <sequenceFlow id="flow17" name="Approved" sourceRef="stage1CheckerGateway" targetRef="migrationTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage1Decision == 'APPROVE'}
+                ${productDecision == 'APPROVE'}
             </conditionExpression>
         </sequenceFlow>
         <sequenceFlow id="flow18" name="Rejected" sourceRef="stage1CheckerGateway" targetRef="stage1MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage1Decision == 'REJECT'}
+                ${productDecision == 'REJECT'}
             </conditionExpression>
         </sequenceFlow>
         <sequenceFlow id="flow19" name="Back to Plans" sourceRef="stage1CheckerGateway" targetRef="stage2MakerTask">
             <conditionExpression xsi:type="tFormalExpression">
-                ${stage1Decision == 'BACK'}
+                ${productDecision == 'BACK'}
             </conditionExpression>
         </sequenceFlow>
         

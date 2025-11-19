@@ -21,6 +21,7 @@ import { flowableApi, dataQueryApi } from '../../api/flowableApi'
 import { stagingApi, PlanStaging } from '../../api/stagingApi'
 import { useRecoilValue } from 'recoil'
 import { authState } from '../../state/auth'
+import { WorkflowDecision, WorkflowDecisionValue } from '../../constants/workflowConstants'
 
 export function PlanApproval() {
   const location = useLocation()
@@ -139,7 +140,7 @@ export function PlanApproval() {
     try {
       setLoading(true)
       await flowableApi.completeTask(taskId, {
-        stage2Decision: 'BACK'
+        [WorkflowDecision.PLAN]: WorkflowDecisionValue.BACK
       })
       setSuccessMessage('Going back to Items...')
       setTimeout(() => navigate('/checker'), 2000)
@@ -156,7 +157,7 @@ export function PlanApproval() {
       const approverUsername = auth.username || 'checker'
       
       // Backend will approve sheet AND complete task
-      await stagingApi.approveSheet(sheetId, approverUsername, taskId, 'stage2Decision')
+      await stagingApi.approveSheet(sheetId, approverUsername, taskId, WorkflowDecision.PLAN)
       
       setSuccessMessage('Sheet approved and task completed! Redirecting...')
       setTimeout(() => navigate('/checker'), 2000)
@@ -171,7 +172,7 @@ export function PlanApproval() {
     try {
       setLoading(true)
       await flowableApi.completeTask(taskId, {
-        stage2Decision: 'REJECT'
+        [WorkflowDecision.PLAN]: WorkflowDecisionValue.REJECT
       })
       setSuccessMessage('Plans rejected! Sending back to maker...')
       setTimeout(() => navigate('/checker'), 2000)

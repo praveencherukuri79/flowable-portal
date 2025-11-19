@@ -21,6 +21,7 @@ import { flowableApi, dataQueryApi } from '../../api/flowableApi'
 import { stagingApi, ProductStaging } from '../../api/stagingApi'
 import { useRecoilValue } from 'recoil'
 import { authState } from '../../state/auth'
+import { WorkflowDecision, WorkflowDecisionValue } from '../../constants/workflowConstants'
 
 export function ProductApproval() {
   const location = useLocation()
@@ -139,7 +140,7 @@ export function ProductApproval() {
     try {
       setLoading(true)
       await flowableApi.completeTask(taskId, {
-        stage1Decision: 'BACK'
+        [WorkflowDecision.PRODUCT]: WorkflowDecisionValue.BACK
       })
       setSuccessMessage('Going back to Plans...')
       setTimeout(() => navigate('/checker'), 2000)
@@ -156,7 +157,7 @@ export function ProductApproval() {
       const approverUsername = auth.username || 'checker'
       
       // Backend will approve sheet AND complete task
-      await stagingApi.approveSheet(sheetId, approverUsername, taskId, 'stage1Decision')
+      await stagingApi.approveSheet(sheetId, approverUsername, taskId, WorkflowDecision.PRODUCT)
       
       setSuccessMessage('Sheet approved and task completed! Process moving to next stage...')
       setTimeout(() => navigate('/checker'), 2000)
@@ -171,7 +172,7 @@ export function ProductApproval() {
     try {
       setLoading(true)
       await flowableApi.completeTask(taskId, {
-        stage1Decision: 'REJECT'
+        [WorkflowDecision.PRODUCT]: WorkflowDecisionValue.REJECT
       })
       setSuccessMessage('Products rejected! Sending back to maker...')
       setTimeout(() => navigate('/checker'), 2000)

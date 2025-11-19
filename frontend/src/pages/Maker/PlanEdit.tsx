@@ -28,6 +28,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { flowableApi, dataQueryApi } from '../../api/flowableApi'
 import { PlanStaging } from '../../api/stagingApi'
 import dayjs from 'dayjs'
+import { WorkflowDecision, WorkflowDecisionValue } from '../../constants/workflowConstants'
 
 export function PlanEdit() {
   const location = useLocation()
@@ -157,7 +158,7 @@ export function PlanEdit() {
       
       // Navigation only - don't send plans data
       await flowableApi.completeTask(taskId, {
-        stage2Decision: 'BACK'
+        [WorkflowDecision.PLAN]: WorkflowDecisionValue.BACK
       })
       setSuccessMessage('Going back to Items...')
       setTimeout(() => navigate('/maker'), 2000)
@@ -188,10 +189,10 @@ export function PlanEdit() {
       }))
 
       // Complete task with reason and clean plans
-      // IMPORTANT: Set stage2Decision to FORWARD to override any previous BACK
+      // IMPORTANT: Set planDecision to FORWARD to override any previous BACK
       await flowableApi.completeTask(taskId, {
         reason: 'submit',
-        stage2Decision: 'FORWARD', // Override any previous BACK decision
+        [WorkflowDecision.PLAN]: WorkflowDecisionValue.FORWARD, // Override any previous BACK decision
         plans: cleanPlans
       })
 

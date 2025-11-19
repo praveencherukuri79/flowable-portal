@@ -31,6 +31,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import { flowableApi, TaskDto } from '../../api/flowableApi'
 import dayjs from 'dayjs'
+import { getDecisionVariableFromTaskKey, WorkflowDecisionValue } from '../../constants/workflowConstants'
 
 export const PendingApprovals: React.FC = () => {
   const [tasks, setTasks] = useState<TaskDto[]>([])
@@ -114,15 +115,12 @@ export const PendingApprovals: React.FC = () => {
         approved: action === 'approve'
       }
 
-      // Add stage-specific decision variables
+      // Add entity-specific decision variables
       const taskDefKey = selectedTask.taskDefinitionKey
       if (taskDefKey) {
-        if (taskDefKey.includes('stage1')) {
-          variables.stage1Decision = action === 'approve' ? 'APPROVE' : 'REJECT'
-        } else if (taskDefKey.includes('stage2')) {
-          variables.stage2Decision = action === 'approve' ? 'APPROVE' : 'REJECT'
-        } else if (taskDefKey.includes('stage3')) {
-          variables.stage3Decision = action === 'approve' ? 'APPROVE' : 'REJECT'
+        const decisionVar = getDecisionVariableFromTaskKey(taskDefKey)
+        if (decisionVar) {
+          variables[decisionVar] = action === 'approve' ? WorkflowDecisionValue.APPROVE : WorkflowDecisionValue.REJECT
         }
       }
 
