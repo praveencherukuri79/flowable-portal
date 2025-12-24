@@ -27,6 +27,10 @@ import {
   alpha,
   Grid,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material'
 import {
   Refresh as RefreshIcon,
@@ -82,6 +86,8 @@ export const InstanceDetails: React.FC = () => {
   const [assignDialog, setAssignDialog] = useState<{ open: boolean; taskId: string } | null>(null)
   const [assignee, setAssignee] = useState('')
   const [editVariableDialog, setEditVariableDialog] = useState<{ open: boolean; name: string; value: string } | null>(null)
+  const [users, setUsers] = useState<{ username: string; fullName: string; role: string }[]>([])
+  const [currentUser, setCurrentUser] = useState<string>('')
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -95,7 +101,18 @@ export const InstanceDetails: React.FC = () => {
     if (instanceId) {
       loadInstanceData()
     }
+    loadUsers()
+    setCurrentUser(localStorage.getItem('username') || '')
   }, [instanceId])
+
+  const loadUsers = async () => {
+    try {
+      const userList = await adminApi.getUsers()
+      setUsers(userList)
+    } catch (err) {
+      console.error('Failed to load users:', err)
+    }
+  }
 
   const loadInstanceData = async () => {
     if (!instanceId) return
@@ -883,21 +900,59 @@ export const InstanceDetails: React.FC = () => {
       </Dialog>
 
       {/* Assign Task Dialog */}
-      <Dialog open={!!assignDialog?.open} onClose={() => setAssignDialog(null)}>
+      <Dialog open={!!assignDialog?.open} onClose={() => setAssignDialog(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Assign Task</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Assignee Username"
-            fullWidth
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value)}
-          />
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select a user to assign this task to:
+          </Typography>
+          
+          {/* Self Assign Button */}
+          {currentUser && (
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => setAssignee(currentUser)}
+              sx={{ 
+                mb: 2, 
+                justifyContent: 'flex-start',
+                borderColor: assignee === currentUser ? 'primary.main' : 'divider',
+                bgcolor: assignee === currentUser ? 'action.selected' : 'transparent',
+              }}
+            >
+              Assign to myself ({currentUser})
+            </Button>
+          )}
+          
+          {/* User Selection */}
+          <FormControl fullWidth>
+            <InputLabel>Select User</InputLabel>
+            <Select
+              value={assignee}
+              label="Select User"
+              onChange={(e) => setAssignee(e.target.value as string)}
+            >
+              {users.map((user) => (
+                <MenuItem key={user.username} value={user.username}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
+                      {user.fullName?.charAt(0) || user.username.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="body2">{user.fullName || user.username}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        @{user.username} • {user.role}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAssignDialog(null)}>Cancel</Button>
-          <Button onClick={handleAssignTask} variant="contained">
+          <Button onClick={() => { setAssignDialog(null); setAssignee(''); }}>Cancel</Button>
+          <Button onClick={handleAssignTask} variant="contained" disabled={!assignee}>
             Assign
           </Button>
         </DialogActions>

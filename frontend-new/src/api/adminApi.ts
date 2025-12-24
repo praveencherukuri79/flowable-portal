@@ -172,6 +172,17 @@ export const adminApi = {
     await api.post(`/flowable/task/complete/${taskId}`, variables || {})
   },
 
+  // ============ USERS ============
+
+  /**
+   * Get all users for assignment
+   * GET /api/admin/users
+   */
+  getUsers: async (): Promise<{ id: string; username: string; fullName: string; role: string }[]> => {
+    const response = await api.get<{ id: string; username: string; fullName: string; role: string }[]>('/admin/users')
+    return response.data
+  },
+
   // ============ EVENTS ============
 
   /**
