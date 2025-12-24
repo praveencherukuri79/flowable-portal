@@ -32,6 +32,7 @@ import {
   Schema as SchemaIcon,
 } from '@mui/icons-material'
 import { adminApi } from '../api/adminApi'
+import { BpmnViewer } from '../components/BpmnViewer'
 import type { ProcessDefinition } from '../types'
 import axios from 'axios'
 
@@ -44,10 +45,34 @@ export const Definitions: React.FC = () => {
   const [businessKey, setBusinessKey] = useState('')
   const [starting, setStarting] = useState(false)
   const [diagramDialog, setDiagramDialog] = useState<{ open: boolean; definition: ProcessDefinition | null }>({ open: false, definition: null })
+  const [bpmnXml, setBpmnXml] = useState<string>('')
+  const [diagramLoading, setDiagramLoading] = useState(false)
 
   useEffect(() => {
     loadDefinitions()
   }, [])
+
+  // Load BPMN XML when diagram dialog opens
+  useEffect(() => {
+    if (diagramDialog.open && diagramDialog.definition) {
+      loadDiagram(diagramDialog.definition.key)
+    } else {
+      setBpmnXml('')
+    }
+  }, [diagramDialog.open, diagramDialog.definition])
+
+  const loadDiagram = async (processDefinitionKey: string) => {
+    setDiagramLoading(true)
+    try {
+      const xml = await adminApi.getBpmnXml(processDefinitionKey)
+      setBpmnXml(xml)
+    } catch (err) {
+      console.error('Failed to load diagram:', err)
+      setBpmnXml('')
+    } finally {
+      setDiagramLoading(false)
+    }
+  }
 
   const loadDefinitions = async () => {
     setLoading(true)
@@ -297,32 +322,18 @@ export const Definitions: React.FC = () => {
       <Dialog 
         open={diagramDialog.open} 
         onClose={() => setDiagramDialog({ open: false, definition: null })}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
           Process Diagram: {diagramDialog.definition?.name || diagramDialog.definition?.key}
         </DialogTitle>
         <DialogContent>
-          <Box
-            sx={{
-              height: 400,
-              bgcolor: '#0d131b',
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <Typography color="text.secondary">
-              BPMN Diagram for {diagramDialog.definition?.key}
-              <br />
-              <Typography variant="caption" color="text.disabled">
-                (Diagram preview requires a running instance)
-              </Typography>
-            </Typography>
+          <Box sx={{ height: 500 }}>
+            <BpmnViewer
+              xml={bpmnXml}
+              loading={diagramLoading}
+            />
           </Box>
         </DialogContent>
         <DialogActions>
