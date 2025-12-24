@@ -5,12 +5,15 @@ import com.example.backend.dto.TaskDto;
 import com.example.backend.service.FlowableHistoryService;
 import com.example.backend.util.DtoMapper;
 import org.flowable.engine.HistoryService;
+import org.flowable.engine.RuntimeService;
 import org.flowable.engine.history.HistoricProcessInstance;
+import org.flowable.engine.runtime.Execution;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +25,9 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
 
     @Autowired
     private HistoryService historyService;
+    
+    @Autowired
+    private RuntimeService runtimeService;
 
     @Override
     public List<ProcessInstanceDto> getProcessHistory(String processKey) {
@@ -47,7 +53,41 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
         HistoricProcessInstance hpi = historyService.createHistoricProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .singleResult();
-        return hpi != null ? DtoMapper.toProcessInstanceDto(hpi) : null;
+        if (hpi == null) return null;
+        
+        ProcessInstanceDto dto = DtoMapper.toProcessInstanceDto(hpi);
+        
+        // Get completed activity IDs from history
+        List<String> completedActivityIds = historyService.createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .finished()
+                .list()
+                .stream()
+                .map(activity -> activity.getActivityId())
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        dto.setCompletedActivityIds(completedActivityIds);
+        
+        // For running instances, get the active activity IDs
+        if (hpi.getEndTime() == null) {
+            try {
+                List<Execution> executions = runtimeService.createExecutionQuery()
+                        .processInstanceId(processInstanceId)
+                        .list();
+                List<String> activeActivityIds = executions.stream()
+                        .map(Execution::getActivityId)
+                        .filter(id -> id != null)
+                        .distinct()
+                        .collect(Collectors.toList());
+                dto.setActiveActivityIds(activeActivityIds);
+            } catch (Exception e) {
+                // Instance might have completed between queries
+                dto.setActiveActivityIds(new ArrayList<>());
+            }
+        }
+        
+        return dto;
     }
 
     @Override

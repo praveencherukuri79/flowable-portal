@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Flowable Admin Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-hover": "#0e4bca",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#0f172a",
+                        "surface-dark": "#1e293b",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#334155"
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "sans-serif"]
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 h-screen overflow-hidden flex">
+<aside class="w-72 flex-shrink-0 flex flex-col bg-white dark:bg-surface-dark border-r border-border-light dark:border-border-dark z-20 transition-all">
+<div class="h-16 flex items-center px-6 border-b border-border-light dark:border-border-dark bg-white dark:bg-surface-dark">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</div>
+<div>
+<h1 class="text-base font-bold text-slate-900 dark:text-white leading-none">Flowable<span class="font-normal text-slate-500 dark:text-slate-400">Admin</span></h1>
+</div>
+</div>
+</div>
+<nav class="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+<div>
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Overview</div>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50/80 dark:bg-primary/10 text-primary font-medium text-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+                        Dashboard
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">analytics</span>
+<span class="text-sm font-medium">Analytics</span>
+</a>
+</li>
+</ul>
+</div>
+<div>
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Process Engine</div>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">cloud_upload</span>
+<span class="text-sm font-medium">App Deployments</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">integration_instructions</span>
+<span class="text-sm font-medium">Definitions</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">account_tree</span>
+<span class="text-sm font-medium">Instances</span>
+<span class="ml-auto bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full">124</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">task</span>
+<span class="text-sm font-medium">Tasks</span>
+<span class="ml-auto bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 text-[10px] font-bold px-2 py-0.5 rounded-full">12</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">timer</span>
+<span class="text-sm font-medium">Jobs</span>
+</a>
+</li>
+</ul>
+</div>
+<div>
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">System</div>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">group</span>
+<span class="text-sm font-medium">Identity Management</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">Configuration</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<div class="p-4 border-t border-border-light dark:border-border-dark">
+<button class="flex items-center w-full gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left">
+<div class="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-md">AD</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-900 dark:text-white truncate">Administrator</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">admin@flowable.org</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">unfold_more</span>
+</button>
+</div>
+</aside>
+<div class="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark relative h-full">
+<header class="h-16 flex items-center justify-between px-8 bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-border-light dark:border-border-dark sticky top-0 z-10">
+<div class="flex flex-col">
+<h2 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Dashboard Overview</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span>
+<input class="pl-10 pr-4 py-2 w-64 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="Search processes, tasks..." type="text"/>
+</div>
+<div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<button class="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[24px]">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark"></span>
+</button>
+<button class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[24px]">help</span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto p-8 scroll-smooth">
+<div class="max-w-7xl mx-auto space-y-8">
+<div class="flex items-end justify-between">
+<div>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white">Welcome back, Admin</h1>
+<p class="text-slate-500 dark:text-slate-400 mt-1">System status is <span class="text-emerald-500 font-medium">healthy</span>. You have <span class="text-primary font-medium">12 pending tasks</span>.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export Report
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors shadow-sm shadow-blue-500/20">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Start Process
+                    </button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white dark:bg-surface-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined text-[24px]">donut_large</span>
+</div>
+<span class="flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded">
+                            +12%
+                        </span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-500 dark:text-slate-400 text-sm font-medium">Active Instances</span>
+<span class="text-2xl font-bold text-slate-900 dark:text-white mt-1">1,240</span>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400">
+<span class="material-symbols-outlined text-[24px]">hourglass_top</span>
+</div>
+<span class="flex items-center text-xs font-semibold text-amber-600 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2 py-1 rounded">
+                            Action Req
+                        </span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-500 dark:text-slate-400 text-sm font-medium">Pending Approvals</span>
+<span class="text-2xl font-bold text-slate-900 dark:text-white mt-1">12</span>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined text-[24px]">check_circle</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-500 dark:text-slate-400 text-sm font-medium">Completed Today</span>
+<span class="text-2xl font-bold text-slate-900 dark:text-white mt-1">85</span>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-600 dark:text-rose-400">
+<span class="material-symbols-outlined text-[24px]">warning</span>
+</div>
+<span class="flex items-center text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-400 px-2 py-1 rounded">
+                            -0.1%
+                        </span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-500 dark:text-slate-400 text-sm font-medium">Error Rate</span>
+<span class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0.4%</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 bg-white dark:bg-surface-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="font-bold text-slate-900 dark:text-white">Process Volume</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">New instances over time</p>
+</div>
+<select class="text-sm border-0 bg-slate-50 dark:bg-slate-800 rounded-md py-1.5 px-3 focus:ring-1 focus:ring-primary text-slate-600 dark:text-slate-300">
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+</select>
+</div>
+<div class="h-64 w-full relative">
+<div class="absolute inset-0 flex items-end justify-between px-2 pt-4 space-x-2">
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 text-slate-200 dark:text-slate-700">
+<div class="border-b border-dashed border-current h-px w-full"></div>
+<div class="border-b border-dashed border-current h-px w-full"></div>
+<div class="border-b border-dashed border-current h-px w-full"></div>
+<div class="border-b border-dashed border-current h-px w-full"></div>
+<div class="border-b border-current h-px w-full"></div>
+</div>
+<div class="z-10 w-1/12 bg-blue-100 dark:bg-blue-900/30 rounded-t h-[40%] group relative">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs px-2 py-1 rounded">40</div>
+</div>
+<div class="z-10 w-1/12 bg-blue-100 dark:bg-blue-900/30 rounded-t h-[60%] group relative">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs px-2 py-1 rounded">60</div>
+</div>
+<div class="z-10 w-1/12 bg-blue-200 dark:bg-blue-800/40 rounded-t h-[45%] group relative"></div>
+<div class="z-10 w-1/12 bg-blue-300 dark:bg-blue-700/50 rounded-t h-[75%] group relative"></div>
+<div class="z-10 w-1/12 bg-blue-400 dark:bg-blue-600/60 rounded-t h-[55%] group relative"></div>
+<div class="z-10 w-1/12 bg-primary dark:bg-primary rounded-t h-[85%] group relative shadow-[0_0_15px_rgba(19,91,236,0.3)]">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 block bg-slate-900 text-white font-bold text-xs px-2 py-1 rounded">85</div>
+</div>
+<div class="z-10 w-1/12 bg-blue-400 dark:bg-blue-600/60 rounded-t h-[65%] group relative"></div>
+</div>
+</div>
+<div class="flex justify-between mt-2 text-xs font-medium text-slate-400 uppercase tracking-wider px-2">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft flex flex-col">
+<h3 class="font-bold text-slate-900 dark:text-white mb-1">Definition Usage</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Instances by process definition</p>
+<div class="flex-1 flex flex-col justify-center gap-6">
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span class="text-slate-700 dark:text-slate-300">Onboarding</span>
+<span class="text-slate-900 dark:text-white font-bold">45%</span>
+</div>
+<div class="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[45%] rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span class="text-slate-700 dark:text-slate-300">Payment Process</span>
+<span class="text-slate-900 dark:text-white font-bold">32%</span>
+</div>
+<div class="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-violet-500 w-[32%] rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span class="text-slate-700 dark:text-slate-300">Loan Approval</span>
+<span class="text-slate-900 dark:text-white font-bold">18%</span>
+</div>
+<div class="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 w-[18%] rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span class="text-slate-700 dark:text-slate-300">Support Ticket</span>
+<span class="text-slate-900 dark:text-white font-bold">5%</span>
+</div>
+<div class="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 w-[5%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+<div class="xl:col-span-2 bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft overflow-hidden flex flex-col">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<div>
+<h3 class="font-bold text-slate-900 dark:text-white">Pending Maker-Checker Tasks</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Requires review before proceeding</p>
+</div>
+<button class="text-primary hover:text-primary-hover text-sm font-medium transition-colors">View All Tasks</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+<th class="px-6 py-4">Task</th>
+<th class="px-6 py-4">Definition</th>
+<th class="px-6 py-4">Assignee</th>
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="font-medium text-slate-900 dark:text-white">Verify Document A</div>
+<div class="text-xs text-slate-500">Created 2h ago</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-300">Onboarding Flow</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-600">SJ</div>
+<span class="text-slate-600 dark:text-slate-400">Sarah Jenkins</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            Pending
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary-hover font-medium text-xs border border-primary/20 bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded transition-all">Claim</button>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="font-medium text-slate-900 dark:text-white">Approve Loan Limit</div>
+<div class="text-xs text-slate-500">Created 4h ago</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-300">Loan Approval</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-600">MR</div>
+<span class="text-slate-600 dark:text-slate-400">Mike Ross</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            Pending
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary-hover font-medium text-xs border border-primary/20 bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded transition-all">Claim</button>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="font-medium text-slate-900 dark:text-white">KYC Final Check</div>
+<div class="text-xs text-slate-500">Created 6h ago</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-slate-300">KYC Verification</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-600">JP</div>
+<span class="text-slate-600 dark:text-slate-400">Jessica Pearson</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            Overdue
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary-hover font-medium text-xs border border-primary/20 bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded transition-all">Claim</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-800 shadow-soft flex flex-col">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800">
+<h3 class="font-bold text-slate-900 dark:text-white">Recent Activity</h3>
+</div>
+<div class="p-6 flex-1 overflow-y-auto max-h-[400px]">
+<div class="relative pl-4 border-l border-slate-200 dark:border-slate-700 space-y-8">
+<div class="relative">
+<span class="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-white dark:ring-surface-dark"></span>
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Process Deployed</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">"Loan Approval v2.1" was deployed successfully.</p>
+<span class="text-[10px] text-slate-400 mt-2 block">10 mins ago</span>
+</div>
+<div class="relative">
+<span class="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-4 ring-white dark:ring-surface-dark"></span>
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Instance Failure</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Instance #8990 failed at 'Gateway Check'.</p>
+<span class="text-[10px] text-slate-400 mt-2 block">2 hours ago</span>
+</div>
+<div class="relative">
+<span class="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-surface-dark"></span>
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Bulk Migration</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Migrated 50 instances to v2.1.</p>
+<span class="text-[10px] text-slate-400 mt-2 block">5 hours ago</span>
+</div>
+<div class="relative">
+<span class="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600 ring-4 ring-white dark:ring-surface-dark"></span>
+<p class="text-sm font-semibold text-slate-900 dark:text-white">User Added</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Admin added 'John Doe' to group 'Reviewers'.</p>
+<span class="text-[10px] text-slate-400 mt-2 block">Yesterday</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

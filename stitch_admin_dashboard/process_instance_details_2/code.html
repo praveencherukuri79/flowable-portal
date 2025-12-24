@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Flowable Admin - Process Instance Details</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1976d2","primary-hover": "#1565c0",
+                        "secondary": "#9c27b0",
+                        "background-light": "#f3f4f6",
+                        "background-dark": "#0a1929","surface-dark": "#001e3c","surface-darker": "#0a1929",
+                        "border-dark": "#132f4c",
+                        "text-primary": "#ffffff",
+                        "text-secondary": "#b2bac2",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "4px", "lg": "8px", "xl": "12px", "full": "9999px" },
+                    boxShadow: {
+                        'mui': '0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a1929; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #132f4c; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1e4976; 
+        }
+        .diagram-node {
+            transition: all 0.2s ease;
+        }
+        .diagram-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }.ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        .ripple:after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform .5s, opacity 1s;
+        }
+        .ripple:active:after {
+            transform: scale(0, 0);
+            opacity: .2;
+            transition: 0s;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-text-primary font-display overflow-hidden antialiased">
+<div class="flex h-screen w-full overflow-hidden">
+<aside class="w-[280px] flex-shrink-0 flex flex-col border-r border-border-dark bg-background-dark hidden md:flex z-30 shadow-mui">
+<div class="h-16 flex items-center px-6 border-b border-border-dark">
+<div class="flex items-center gap-3">
+<div class="bg-primary/20 p-1.5 rounded-lg">
+<span class="material-symbols-outlined text-primary text-2xl">all_inclusive</span>
+</div>
+<span class="text-white text-lg font-bold tracking-tight">Flowable Admin</span>
+</div>
+</div>
+<div class="flex flex-col flex-1 overflow-y-auto py-4">
+<div class="px-4 mb-2">
+<p class="text-xs font-semibold text-primary uppercase tracking-wider mb-2 px-2">General</p>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-colors group ripple" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-colors group ripple" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary transition-colors">schema</span>
+<span class="text-sm font-medium">Definitions</span>
+</a>
+</nav>
+</div>
+<div class="px-4 mb-2">
+<p class="text-xs font-semibold text-primary uppercase tracking-wider mb-2 px-2">Process Management</p>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-inner ripple" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">list_alt</span>
+<span class="text-sm font-semibold">Instances</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-colors group ripple" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary transition-colors">check_circle</span>
+<span class="text-sm font-medium">Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-colors group ripple" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary transition-colors">engineering</span>
+<span class="text-sm font-medium">Jobs</span>
+</a>
+</nav>
+</div>
+<div class="px-4 mt-auto">
+<div class="border-t border-border-dark pt-4">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-colors group ripple" href="#">
+<span class="material-symbols-outlined text-xl group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">System Settings</span>
+</a>
+<div class="mt-4 flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-dark border border-border-dark">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-8 ring-2 ring-primary/30" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCct2Qi28y8UUwHc7IUgRsHKN_GGKa0ROjZRhPMQ8QuIICwoYi1_0vMqTuTGWK8b9xlq310pTGidoQLmvJX2PRYXBD6UypGvgu3ShRzIYNsNeeokSBIo6ILDtjFh18V3qPQ_77TU8xZPeU5YufEP2qzpWnRaNNR-q4In4ky9zkfQrKB0R8tuKoYAuuj6szAnaqQovtCNpyQ1KnRcjRcnj3Z7ryQE79mDxxwn8XolwDr8-7NSYAtf6cqs6kJ0Reom-J4f6FUd8D7KCM");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Administrator</span>
+<span class="text-xs text-text-secondary truncate">admin@flowable.org</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<div class="flex flex-1 flex-col min-w-0 overflow-hidden bg-background-dark relative">
+<header class="h-16 flex items-center justify-between border-b border-border-dark bg-background-dark px-6 shrink-0 z-20 shadow-mui">
+<div class="flex items-center gap-4 flex-1">
+<button class="md:hidden text-text-secondary hover:text-white ripple rounded-full p-2">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<nav class="hidden sm:flex items-center gap-2 text-sm text-text-secondary">
+<a class="hover:text-primary transition-colors hover:underline" href="#">Instances</a>
+<span class="material-symbols-outlined text-base text-gray-600">chevron_right</span>
+<span class="text-white font-medium">Loan Approval #8a7b-22c1</span>
+</nav>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-lg">search</span>
+<input class="bg-surface-dark border border-border-dark rounded-full text-sm text-white placeholder-text-secondary focus:ring-1 focus:ring-primary focus:border-primary pl-9 pr-4 py-1.5 w-64 transition-all" placeholder="Search..." type="text"/>
+</div>
+<button class="relative text-text-secondary hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors ripple">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border border-background-dark"></span>
+</button>
+<button class="text-text-secondary hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors ripple">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8 custom-scrollbar">
+<div class="max-w-[1600px] mx-auto flex flex-col gap-6 h-full">
+<div class="bg-surface-dark rounded-xl border border-border-dark p-6 shadow-mui">
+<div class="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-4 mb-2">
+<h1 class="text-2xl font-bold text-white tracking-tight">Loan Approval Process - v2</h1>
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/30 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wide">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+</span>
+                                        Running
+                                    </div>
+</div>
+<div class="flex flex-wrap gap-x-8 gap-y-2 text-sm text-text-secondary">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs font-medium text-gray-500 uppercase">Instance ID</span>
+<span class="font-mono text-white">8a7b-22c1-90fd</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="text-xs font-medium text-gray-500 uppercase">Business Key</span>
+<span class="font-mono text-white">LOAN-2023-884</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="text-xs font-medium text-gray-500 uppercase">Started By</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-base">person</span>
+<span class="text-white">system-admin</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="text-xs font-medium text-gray-500 uppercase">Started At</span>
+<span class="text-white">Oct 24, 09:15 AM</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 self-start lg:self-center">
+<button class="h-9 px-4 flex items-center justify-center gap-2 rounded bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white/10 transition-all ripple shadow-sm">
+<span class="material-symbols-outlined text-lg">refresh</span>
+                                    Refresh
+                                </button>
+<button class="h-9 px-4 flex items-center justify-center gap-2 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm font-medium hover:bg-orange-500/20 transition-all ripple shadow-sm">
+<span class="material-symbols-outlined text-lg">pause_circle</span>
+                                    Suspend
+                                </button>
+<button class="h-9 px-4 flex items-center justify-center gap-2 rounded bg-red-600 hover:bg-red-700 border border-transparent text-white text-sm font-medium transition-all ripple shadow-mui">
+<span class="material-symbols-outlined text-lg">cancel</span>
+                                    Terminate
+                                </button>
+</div>
+</div>
+</div>
+<div class="border-b border-border-dark">
+<nav aria-label="Tabs" class="flex gap-1">
+<button class="relative py-3 px-4 text-sm font-medium text-primary flex items-center gap-2 hover:bg-white/5 rounded-t-lg transition-colors">
+<span class="material-symbols-outlined text-xl">account_tree</span>
+                                Diagram
+                                <span class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></span>
+</button>
+<button class="relative py-3 px-4 text-sm font-medium text-text-secondary hover:text-white flex items-center gap-2 hover:bg-white/5 rounded-t-lg transition-colors group">
+<span class="material-symbols-outlined text-xl group-hover:text-white">data_object</span>
+                                Variables
+                                <span class="bg-surface-dark border border-border-dark text-text-secondary text-[10px] px-1.5 py-0.5 rounded ml-1">12</span>
+</button>
+<button class="relative py-3 px-4 text-sm font-medium text-text-secondary hover:text-white flex items-center gap-2 hover:bg-white/5 rounded-t-lg transition-colors group">
+<span class="material-symbols-outlined text-xl group-hover:text-white">check_box</span>
+                                Tasks
+                                <span class="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded ml-1 font-bold">1</span>
+</button>
+<button class="relative py-3 px-4 text-sm font-medium text-text-secondary hover:text-white flex items-center gap-2 hover:bg-white/5 rounded-t-lg transition-colors group">
+<span class="material-symbols-outlined text-xl group-hover:text-white">history</span>
+                                Events
+                            </button>
+</nav>
+</div>
+<div class="flex flex-col lg:flex-row gap-6 h-[650px] min-h-[500px]">
+<div class="flex-1 flex flex-col bg-surface-dark rounded-xl border border-border-dark shadow-mui overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-darker flex justify-between items-center">
+<span class="text-xs font-bold text-text-secondary uppercase tracking-wider px-2">BPMN Visualization</span>
+<div class="flex items-center gap-1 bg-background-dark rounded-lg p-1 border border-border-dark">
+<button class="p-1 rounded hover:bg-white/10 text-text-secondary hover:text-white transition"><span class="material-symbols-outlined text-sm">remove</span></button>
+<span class="text-xs text-text-secondary w-8 text-center">100%</span>
+<button class="p-1 rounded hover:bg-white/10 text-text-secondary hover:text-white transition"><span class="material-symbols-outlined text-sm">add</span></button>
+<div class="w-px h-4 bg-border-dark mx-1"></div>
+<button class="p-1 rounded hover:bg-white/10 text-text-secondary hover:text-white transition" title="Fit to screen"><span class="material-symbols-outlined text-sm">center_focus_strong</span></button>
+</div>
+</div>
+<div class="flex-1 relative overflow-hidden bg-[#0d131b] flex items-center justify-center group" data-alt="BPMN Process Diagram">
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#64748b 1px, transparent 1px); background-size: 20px 20px;"></div>
+<svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 0;">
+<path d="M180,300 L280,300" marker-end="url(#arrowhead)" stroke="#475569" stroke-width="2"></path>
+<path d="M420,300 L520,300" stroke="#1976d2" stroke-dasharray="5,5" stroke-width="2"></path>
+<path d="M660,300 L760,300" stroke="#475569" stroke-width="2"></path>
+<defs>
+<marker id="arrowhead" markerHeight="7" markerWidth="10" orient="auto" refX="9" refY="3.5">
+<polygon fill="#475569" points="0 0, 10 3.5, 0 7"></polygon>
+</marker>
+</defs>
+</svg>
+<div class="flex items-center gap-24 z-10 scale-90 lg:scale-100 transition-transform">
+<div class="diagram-node flex flex-col items-center gap-2 opacity-60">
+<div class="size-10 rounded-full border-2 border-slate-500 bg-surface-dark flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-slate-500">play_arrow</span>
+</div>
+<span class="text-xs text-text-secondary font-medium">Start</span>
+</div>
+<div class="diagram-node flex flex-col items-center gap-2 opacity-80">
+<div class="w-36 h-20 rounded-lg border border-slate-600 bg-surface-dark flex items-center justify-center px-2 relative shadow-lg">
+<span class="absolute -top-2 -right-2 bg-green-800 text-green-200 rounded-full p-0.5 border border-background-dark shadow-sm">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</span>
+<span class="text-sm text-text-secondary font-medium text-center">Capture Data</span>
+</div>
+<span class="text-xs text-green-500 font-medium">Completed</span>
+</div>
+<div class="diagram-node flex flex-col items-center gap-2 relative">
+<div class="absolute -inset-2 rounded-xl bg-primary/20 blur-md animate-pulse"></div>
+<div class="w-36 h-20 rounded-lg border-2 border-primary bg-surface-dark flex items-center justify-center px-2 relative z-10 shadow-[0_0_20px_rgba(25,118,210,0.3)] cursor-pointer hover:bg-surface-darker transition-colors">
+<span class="material-symbols-outlined text-primary mb-1 mr-1 text-lg">person</span>
+<span class="text-sm text-white font-semibold text-center">Credit Check</span>
+</div>
+<div class="bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1 shadow-lg">
+                                            Active Task
+                                        </div>
+</div>
+<div class="diagram-node flex flex-col items-center gap-2 opacity-40 grayscale">
+<div class="w-36 h-20 rounded-lg border border-slate-600 bg-surface-dark flex items-center justify-center px-2 shadow-sm">
+<span class="text-sm text-text-secondary font-medium text-center">Manager Approval</span>
+</div>
+</div>
+<div class="diagram-node flex flex-col items-center gap-2 opacity-40 grayscale">
+<div class="size-10 rounded-full border-4 border-slate-600 bg-transparent"></div>
+<span class="text-xs text-text-secondary font-medium">End</span>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full lg:w-[420px] flex flex-col gap-4">
+<div class="rounded-xl border border-primary/40 bg-surface-dark overflow-hidden shadow-mui flex flex-col">
+<div class="bg-gradient-to-r from-primary/20 to-transparent p-4 border-b border-primary/20 flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-primary/20 rounded-lg text-primary">
+<span class="material-symbols-outlined">assignment_ind</span>
+</div>
+<div>
+<h3 class="text-white font-semibold text-sm">Current Task</h3>
+<p class="text-primary-light text-base font-bold text-blue-400">Credit Check</p>
+</div>
+</div>
+<span class="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wide">User Task</span>
+</div>
+<div class="p-5 flex flex-col gap-5">
+<div class="grid grid-cols-2 gap-y-4 gap-x-2">
+<div class="flex flex-col gap-1">
+<span class="text-xs text-text-secondary uppercase font-semibold">Assignee</span>
+<div class="flex items-center gap-2 text-white text-sm bg-background-dark p-1.5 rounded border border-border-dark">
+<span class="size-5 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold">?</span>
+<span class="italic text-slate-400">Unassigned</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-xs text-text-secondary uppercase font-semibold">Candidate Group</span>
+<div class="flex items-center gap-2 text-white text-sm bg-background-dark p-1.5 rounded border border-border-dark">
+<span class="material-symbols-outlined text-sm text-slate-400">group</span>
+<span>risk-team</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-xs text-text-secondary uppercase font-semibold">Created</span>
+<span class="text-sm text-white">2 mins ago</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-xs text-text-secondary uppercase font-semibold">Due Date</span>
+<span class="text-sm text-red-400 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">event_busy</span>
+                                                Oct 25
+                                            </span>
+</div>
+</div>
+<div class="border-t border-border-dark pt-4 flex flex-col gap-2">
+<label class="text-xs text-text-secondary uppercase font-semibold">Quick Actions</label>
+<div class="flex gap-2">
+<button class="flex-1 bg-primary hover:bg-primary-hover text-white text-sm font-medium py-2 px-4 rounded shadow-md transition-colors ripple">
+                                                Claim Task
+                                            </button>
+<button class="bg-surface-darker hover:bg-white/10 border border-border-dark text-white p-2 rounded transition-colors ripple" title="Reassign">
+<span class="material-symbols-outlined text-xl">person_add</span>
+</button>
+<button class="bg-surface-darker hover:bg-white/10 border border-border-dark text-white p-2 rounded transition-colors ripple" title="Open Form">
+<span class="material-symbols-outlined text-xl">open_in_new</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="rounded-xl border border-border-dark bg-surface-dark flex flex-col flex-1 overflow-hidden shadow-mui">
+<div class="p-4 border-b border-border-dark flex justify-between items-center bg-surface-darker">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-lg">data_object</span>
+<h3 class="text-white font-semibold text-sm">Process Variables</h3>
+</div>
+<button class="text-primary hover:text-white text-xs font-medium flex items-center gap-1 transition-colors px-2 py-1 hover:bg-white/10 rounded">
+<span class="material-symbols-outlined text-sm">add</span> Add Variable
+                                    </button>
+</div>
+<div class="flex-1 overflow-auto bg-surface-dark">
+<table class="w-full text-left border-collapse">
+<thead class="bg-background-dark sticky top-0 z-10 text-[10px] uppercase text-text-secondary font-bold tracking-wider">
+<tr>
+<th class="p-3 pl-4 border-b border-border-dark">Name</th>
+<th class="p-3 border-b border-border-dark">Value</th>
+<th class="p-3 w-10 border-b border-border-dark"></th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-border-dark">
+<tr class="group hover:bg-white/5 transition-colors">
+<td class="p-3 pl-4 text-primary-light font-mono text-xs text-blue-300">loanAmount</td>
+<td class="p-3 text-white">
+<span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-xs font-mono">50000</span>
+</td>
+<td class="p-3 text-right">
+<button class="text-text-secondary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-sm">edit</span></button>
+</td>
+</tr>
+<tr class="group hover:bg-white/5 transition-colors">
+<td class="p-3 pl-4 text-primary-light font-mono text-xs text-blue-300">applicantName</td>
+<td class="p-3 text-white truncate max-w-[100px]">"John Doe"</td>
+<td class="p-3 text-right">
+<button class="text-text-secondary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-sm">edit</span></button>
+</td>
+</tr>
+<tr class="group hover:bg-white/5 transition-colors">
+<td class="p-3 pl-4 text-primary-light font-mono text-xs text-blue-300">creditScore</td>
+<td class="p-3 text-white">720</td>
+<td class="p-3 text-right">
+<button class="text-text-secondary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-sm">edit</span></button>
+</td>
+</tr>
+<tr class="group hover:bg-white/5 transition-colors">
+<td class="p-3 pl-4 text-primary-light font-mono text-xs text-blue-300">isHighRisk</td>
+<td class="p-3 text-yellow-400 font-mono text-xs">false</td>
+<td class="p-3 text-right">
+<button class="text-text-secondary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-sm">edit</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-2 border-t border-border-dark bg-surface-darker text-center">
+<button class="text-xs text-text-secondary hover:text-white transition-colors w-full py-1 hover:bg-white/5 rounded">View all 12 variables</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+</body></html>

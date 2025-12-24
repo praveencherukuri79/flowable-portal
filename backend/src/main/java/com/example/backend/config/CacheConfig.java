@@ -25,6 +25,7 @@ public class CacheConfig {
             "userGroups", 
             "deployments",
             "processInstances",
+            "processVariables",
             "taskDefinitions",
             "modelInfo",
             "engineInfo",

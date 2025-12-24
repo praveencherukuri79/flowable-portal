@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Running Instances Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-hover": "#0f4bc4",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1a2333",
+                        "border-dark": "#232f48",
+                        "text-secondary": "#92a4c9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "sans": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }.custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #374151;
+            border-radius: 20px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased selection:bg-primary/30 h-screen overflow-hidden">
+<div class="flex h-full w-full flex-row">
+<aside class="flex w-72 flex-col border-r border-border-dark bg-[#111722] flex-shrink-0 h-full">
+<div class="flex h-full flex-col">
+<div class="flex items-center gap-3 px-6 py-5 border-b border-border-dark/50">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined text-[20px]">hub</span>
+</div>
+<div>
+<h1 class="text-white text-base font-bold leading-tight">Flowable Admin</h1>
+<p class="text-text-secondary text-[11px] font-medium uppercase tracking-wider">Workspace</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-4 py-6 overflow-y-auto custom-scrollbar">
+<div class="text-text-secondary text-xs font-semibold uppercase tracking-wider px-3 mb-2">Main</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-white shadow-lg shadow-primary/20 transition-all" href="#">
+<span class="material-symbols-outlined text-[22px] font-variation-settings-'FILL' 1">play_circle</span>
+<span class="text-sm font-medium">Running Instances</span>
+<span class="ml-auto bg-white/20 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">1240</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-emerald-500 transition-colors">check_circle</span>
+<span class="text-sm font-medium">Completed Instances</span>
+</a>
+<div class="text-text-secondary text-xs font-semibold uppercase tracking-wider px-3 mt-6 mb-2">Management</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-purple-500 transition-colors">assignment</span>
+<span class="text-sm font-medium">Task List</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-amber-500 transition-colors">deployed_code</span>
+<span class="text-sm font-medium">Definitions</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-blue-400 transition-colors">group</span>
+<span class="text-sm font-medium">Identity Management</span>
+</a>
+<div class="mt-auto"></div> 
+<div class="text-text-secondary text-xs font-semibold uppercase tracking-wider px-3 mt-6 mb-2">System</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-slate-400 transition-colors">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-dark bg-[#0d121c]">
+<button class="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-surface-dark transition-colors text-left group">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-9 w-9 shrink-0 ring-2 ring-border-dark group-hover:ring-primary/50 transition-all" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC2GOZRBrrhBF-f07y9EZKYC3RGQ1HLShIF88jdrUJ7aGeInSjbRpQlXj3DmvIQ9TGzg6DvjcOQR4RcfoOljG9AY8E9WkOyeQK8d_aqjtbN7bE8QhP4Nm_rfVZUcjtACPCbPnsl8Ca1xZEKsmWURvwcATkpQj_D8v66pu4ImOEbjT__zvfHcgMUTO4o3XWxWkDV5CqS4SGj2L9jDfpxL8Y1wQxtI4EWdqFVLCg_EbnKsNA2VzNFFkIVtzswpFP_TU4nBRzQfb9Koh4");'></div>
+<div class="flex flex-col flex-1 overflow-hidden">
+<p class="text-white text-sm font-semibold truncate">Admin User</p>
+<p class="text-text-secondary text-xs truncate">admin@flowable.io</p>
+</div>
+<span class="material-symbols-outlined text-text-secondary group-hover:text-white">unfold_more</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex flex-1 flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative">
+<header class="flex items-center justify-between border-b border-border-dark bg-[#111722]/80 backdrop-blur-md px-8 py-4 z-10 sticky top-0">
+<div class="flex flex-col">
+<nav aria-label="Breadcrumb" class="flex">
+<ol class="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
+<li class="inline-flex items-center">
+<a class="inline-flex items-center text-xs font-medium text-text-secondary hover:text-white" href="#">
+<span class="material-symbols-outlined text-[16px] mr-1">home</span>
+                                Home
+                            </a>
+</li>
+<li>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-text-secondary text-[16px]">chevron_right</span>
+<span class="ms-1 text-xs font-medium text-text-secondary md:ms-2">Process Management</span>
+</div>
+</li>
+<li aria-current="page">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-text-secondary text-[16px]">chevron_right</span>
+<span class="ms-1 text-xs font-medium text-white md:ms-2">Running Instances</span>
+</div>
+</li>
+</ol>
+</nav>
+<h1 class="text-xl font-bold text-white tracking-tight mt-1">Running Instances</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group hidden md:block">
+<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+<span class="material-symbols-outlined text-text-secondary">search</span>
+</div>
+<input class="block w-64 rounded-lg border border-border-dark bg-surface-dark py-2 pl-10 pr-4 text-sm text-white placeholder-text-secondary focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Search by ID or name..." type="text"/>
+<div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+<kbd class="inline-flex items-center border border-gray-600 rounded px-1.5 text-xs font-sans font-medium text-gray-400">⌘K</kbd>
+</div>
+</div>
+<div class="h-6 w-px bg-border-dark mx-2"></div>
+<button class="relative p-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-[#111722]"></span>
+</button>
+<button class="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>Start Process</span>
+</button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<div class="max-w-[1600px] mx-auto flex flex-col gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/50 transition-all cursor-pointer group shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-text-secondary text-sm font-medium">Total Active</p>
+<h3 class="text-3xl font-bold text-white mt-1">1,240</h3>
+</div>
+<span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[24px]">dataset</span>
+</div>
+<div class="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 70%"></div>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-red-500/50 transition-all cursor-pointer group shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-text-secondary text-sm font-medium">Critical Overdue</p>
+<h3 class="text-3xl font-bold text-white mt-1">45</h3>
+</div>
+<span class="material-symbols-outlined text-red-500 bg-red-500/10 p-2 rounded-lg text-[24px]">warning</span>
+</div>
+<div class="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-red-500 h-full rounded-full" style="width: 15%"></div>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-amber-500/50 transition-all cursor-pointer group shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-text-secondary text-sm font-medium">Pending Tasks</p>
+<h3 class="text-3xl font-bold text-white mt-1">82</h3>
+</div>
+<span class="material-symbols-outlined text-amber-500 bg-amber-500/10 p-2 rounded-lg text-[24px]">pending_actions</span>
+</div>
+<div class="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-amber-500 h-full rounded-full" style="width: 45%"></div>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-emerald-500/50 transition-all cursor-pointer group shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-text-secondary text-sm font-medium">Completed Today</p>
+<h3 class="text-3xl font-bold text-white mt-1">156</h3>
+</div>
+<span class="material-symbols-outlined text-emerald-500 bg-emerald-500/10 p-2 rounded-lg text-[24px]">check_circle</span>
+</div>
+<div class="flex items-center text-emerald-400 text-xs font-medium mt-2">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span>
+                            +24% vs yesterday
+                        </div>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row justify-between gap-4 items-end sm:items-center">
+<div class="flex items-center gap-2">
+<div class="relative">
+<button class="px-4 py-2 rounded-lg bg-surface-dark border border-border-dark text-white text-sm font-medium flex items-center gap-2 hover:bg-[#232f48] transition-colors">
+<span class="material-symbols-outlined text-[18px] text-text-secondary">filter_list</span>
+                                Filter
+                                <span class="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded ml-1">2</span>
+</button>
+</div>
+<div class="h-8 w-px bg-border-dark mx-1"></div>
+<div class="flex gap-2">
+<span class="bg-surface-dark border border-border-dark text-text-secondary px-3 py-1.5 rounded-full text-xs flex items-center gap-1">
+                                Status: Running <button class="hover:text-white"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<span class="bg-surface-dark border border-border-dark text-text-secondary px-3 py-1.5 rounded-full text-xs flex items-center gap-1">
+                                Priority: High <button class="hover:text-white"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<button class="text-primary text-xs font-medium hover:underline px-2">Clear all</button>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-2 rounded-lg bg-surface-dark border border-border-dark text-text-secondary hover:text-white text-sm font-medium flex items-center gap-2 hover:bg-[#232f48] transition-colors" title="Export CSV">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="px-3 py-2 rounded-lg bg-surface-dark border border-border-dark text-text-secondary hover:text-white text-sm font-medium flex items-center gap-2 hover:bg-[#232f48] transition-colors" title="Table Settings">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark rounded-xl flex flex-col overflow-hidden shadow-xl ring-1 ring-white/5">
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#161e2e]/50 border-b border-border-dark text-text-secondary text-xs uppercase font-semibold tracking-wider">
+<th class="p-4 w-12 text-center">
+<input class="rounded border-border-dark bg-[#111722] text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer h-4 w-4 transition-all hover:border-primary" type="checkbox"/>
+</th>
+<th class="p-4 cursor-pointer hover:text-white group transition-colors">
+<div class="flex items-center gap-1">
+                                            Instance ID
+                                            <span class="material-symbols-outlined text-[16px] text-primary opacity-100">arrow_downward</span>
+</div>
+</th>
+<th class="p-4 cursor-pointer hover:text-white transition-colors">Process Name</th>
+<th class="p-4 cursor-pointer hover:text-white transition-colors">Initiator</th>
+<th class="p-4 cursor-pointer hover:text-white transition-colors">Current Activity</th>
+<th class="p-4 cursor-pointer hover:text-white transition-colors">Created</th>
+<th class="p-4 cursor-pointer hover:text-white transition-colors">Status</th>
+<th class="p-4 text-right w-48">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark text-sm">
+<tr class="group hover:bg-[#1e293b] transition-colors">
+<td class="p-4 text-center">
+<input class="rounded border-border-dark bg-[#111722] text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4 font-mono text-primary font-medium select-all">#PROC-9281</td>
+<td class="p-4 font-medium text-white">
+<div>Loan Approval v2</div>
+<div class="text-xs text-text-secondary font-normal mt-0.5">Commercial Loan</div>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-xs text-white font-bold ring-2 ring-[#1e293b]">JD</div>
+<div class="flex flex-col">
+<span class="text-white text-xs font-medium">John Doe</span>
+<span class="text-[10px] text-text-secondary">Sales Dept</span>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col">
+<span class="text-white font-medium flex items-center gap-2">
+                                                Risk Assessment
+                                            </span>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] bg-[#232f48] text-text-secondary px-1.5 py-0.5 rounded border border-white/5 uppercase font-bold tracking-wide">User Task</span>
+<span class="text-[10px] text-text-secondary">Assigned: Risk Team</span>
+</div>
+</div>
+</td>
+<td class="p-4 text-text-secondary whitespace-nowrap">
+<div class="text-white">Oct 24, 2023</div>
+<div class="text-xs opacity-60">10:30 AM</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm shadow-emerald-900/20">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            Running
+                                        </span>
+</td>
+<td class="p-4 text-right">
+<div class="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Assign Task">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Add Variables">
+<span class="material-symbols-outlined text-[20px]">data_object</span>
+</button>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Force Complete">
+<span class="material-symbols-outlined text-[20px]">done_all</span>
+</button>
+<div class="h-4 w-px bg-border-dark mx-1"></div>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-[#1e293b] transition-colors border-l-2 border-l-transparent hover:border-l-primary">
+<td class="p-4 text-center">
+<input class="rounded border-border-dark bg-[#111722] text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4 font-mono text-primary font-medium select-all">#PROC-9285</td>
+<td class="p-4 font-medium text-white">
+<div>Employee Onboarding</div>
+<div class="text-xs text-text-secondary font-normal mt-0.5">Standard Track</div>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-xs text-white font-bold ring-2 ring-[#1e293b]">MS</div>
+<div class="flex flex-col">
+<span class="text-white text-xs font-medium">Mike Smith</span>
+<span class="text-[10px] text-text-secondary">HR Dept</span>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col">
+<span class="text-white font-medium flex items-center gap-2">
+                                                IT Setup Approval
+                                            </span>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] bg-[#232f48] text-text-secondary px-1.5 py-0.5 rounded border border-white/5 uppercase font-bold tracking-wide">Checker Task</span>
+<span class="text-[10px] text-text-secondary">Assigned: IT Manager</span>
+</div>
+</div>
+</td>
+<td class="p-4 text-text-secondary whitespace-nowrap">
+<div class="text-white">Oct 23, 2023</div>
+<div class="text-xs opacity-60">09:15 AM</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-sm shadow-amber-900/20">
+<span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                            Overdue
+                                        </span>
+</td>
+<td class="p-4 text-right">
+<div class="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Assign Task">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Add Variables">
+<span class="material-symbols-outlined text-[20px]">data_object</span>
+</button>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Force Complete">
+<span class="material-symbols-outlined text-[20px]">done_all</span>
+</button>
+<div class="h-4 w-px bg-border-dark mx-1"></div>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-[#1e293b] transition-colors border-l-2 border-l-transparent hover:border-l-primary">
+<td class="p-4 text-center">
+<input class="rounded border-border-dark bg-[#111722] text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4 font-mono text-primary font-medium select-all">#PROC-9102</td>
+<td class="p-4 font-medium text-white">
+<div>Compliance Check</div>
+<div class="text-xs text-text-secondary font-normal mt-0.5">Annual Review</div>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-[#334155] flex items-center justify-center text-xs text-white font-bold ring-2 ring-[#1e293b]">SYS</div>
+<div class="flex flex-col">
+<span class="text-white text-xs font-medium">System</span>
+<span class="text-[10px] text-text-secondary">Automated</span>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col">
+<span class="text-white font-medium flex items-center gap-2">
+                                                External API Validation
+                                            </span>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] bg-[#232f48] text-text-secondary px-1.5 py-0.5 rounded border border-white/5 uppercase font-bold tracking-wide">Service Task</span>
+<span class="text-[10px] text-text-secondary">Retrying...</span>
+</div>
+</div>
+</td>
+<td class="p-4 text-text-secondary whitespace-nowrap">
+<div class="text-white">Oct 20, 2023</div>
+<div class="text-xs opacity-60">08:00 AM</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-500 border border-purple-500/20 shadow-sm shadow-purple-900/20">
+<span class="material-symbols-outlined text-[14px]">pause</span>
+                                            Suspended
+                                        </span>
+</td>
+<td class="p-4 text-right">
+<div class="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Resume">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+</button>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Force Complete">
+<span class="material-symbols-outlined text-[20px]">done_all</span>
+</button>
+<div class="h-4 w-px bg-border-dark mx-1"></div>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-[#1e293b] transition-colors border-l-2 border-l-transparent hover:border-l-primary">
+<td class="p-4 text-center">
+<input class="rounded border-border-dark bg-[#111722] text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-4 font-mono text-primary font-medium select-all">#PROC-9330</td>
+<td class="p-4 font-medium text-white">
+<div>Document Review</div>
+<div class="text-xs text-text-secondary font-normal mt-0.5">Legal Contract</div>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-gradient-to-br from-teal-500 to-green-500 flex items-center justify-center text-xs text-white font-bold ring-2 ring-[#1e293b]">RT</div>
+<div class="flex flex-col">
+<span class="text-white text-xs font-medium">Rachel Tate</span>
+<span class="text-[10px] text-text-secondary">Legal Dept</span>
+</div>
+</div>
+</td>
+<td class="p-4">
+<div class="flex flex-col">
+<span class="text-white font-medium flex items-center gap-2">
+                                                Final Sign-off
+                                            </span>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] bg-[#232f48] text-text-secondary px-1.5 py-0.5 rounded border border-white/5 uppercase font-bold tracking-wide">User Task</span>
+<span class="text-[10px] text-text-secondary">Assigned: Legal Head</span>
+</div>
+</div>
+</td>
+<td class="p-4 text-text-secondary whitespace-nowrap">
+<div class="text-white">Oct 26, 2023</div>
+<div class="text-xs opacity-60">11:45 AM</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm shadow-emerald-900/20">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            Running
+                                        </span>
+</td>
+<td class="p-4 text-right">
+<div class="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Assign Task">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</button>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Add Variables">
+<span class="material-symbols-outlined text-[20px]">data_object</span>
+</button>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors" title="Force Complete">
+<span class="material-symbols-outlined text-[20px]">done_all</span>
+</button>
+<div class="h-4 w-px bg-border-dark mx-1"></div>
+<button class="text-text-secondary hover:text-white hover:bg-white/10 p-1.5 rounded-md transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-border-dark flex items-center justify-between bg-[#161e2e]/50">
+<div class="text-sm text-text-secondary">
+                            Showing <span class="font-bold text-white">1-10</span> of <span class="font-bold text-white">1,240</span> instances
+                        </div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="text-xs text-text-secondary uppercase font-bold tracking-wider">Rows per page</span>
+<select class="bg-surface-dark border border-border-dark text-white text-xs rounded p-1.5 pr-8 focus:ring-1 focus:ring-primary cursor-pointer outline-none">
+<option>10</option>
+<option>25</option>
+<option>50</option>
+</select>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled="">
+<span class="material-symbols-outlined text-[20px]">first_page</span>
+</button>
+<button class="p-1.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled="">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<span class="text-sm text-white font-medium px-2">Page 1 of 124</span>
+<button class="p-1.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+<button class="p-1.5 rounded-lg text-text-secondary hover:bg-surface-dark hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

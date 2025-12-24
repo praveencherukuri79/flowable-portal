@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Completed Instances Viewer</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0B1120","surface-dark": "#151b28",
+                        "surface-dark-lighter": "#1c2433",
+                        "border-dark": "#2a3447"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>.custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0B1120;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2a3447;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #3b4963;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display h-screen w-full overflow-hidden flex selection:bg-primary/30">
+<aside class="w-64 bg-surface-dark border-r border-border-dark flex flex-col shrink-0 z-20 shadow-xl">
+<div class="p-6 flex items-center gap-3 mb-2">
+<div class="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center text-white shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[20px]">dataset</span>
+</div>
+<div>
+<h1 class="text-sm font-bold text-white leading-tight">Flowable Admin</h1>
+<p class="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Process Manager</p>
+</div>
+</div>
+<nav class="flex-1 px-3 py-2 flex flex-col gap-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 mt-2">
+<p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Main</p>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-white transition-colors text-[20px]">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-white transition-colors text-[20px]">play_circle</span>
+<span class="text-sm font-medium">Running Instances</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-sm shadow-primary/5 relative overflow-hidden" href="#">
+<div class="absolute inset-y-0 left-0 w-1 bg-primary"></div>
+<span class="material-symbols-outlined fill-1 text-[20px] ml-1">check_circle</span>
+<span class="text-sm font-medium">Completed Instances</span>
+</a>
+<div class="px-3 mb-2 mt-6">
+<p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Configuration</p>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-white transition-colors text-[20px]">hub</span>
+<span class="text-sm font-medium">Definitions</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-white transition-colors text-[20px]">group</span>
+<span class="text-sm font-medium">Users &amp; Groups</span>
+</a>
+<div class="my-2 h-px bg-border-dark mx-3"></div>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-white transition-colors text-[20px]">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-dark bg-surface-dark-lighter/30">
+<button class="flex items-center gap-3 w-full px-2 py-2 rounded-lg hover:bg-white/5 transition-colors text-left group">
+<div class="h-8 w-8 rounded-full bg-slate-700 bg-center bg-cover ring-2 ring-transparent group-hover:ring-border-dark transition-all" data-alt="User avatar profile picture" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoDLqvnPzEAtYpaiUtQbogBGT0OqguafdPNYyRiCEkZazGI7P6mIfFUNd8amgGbqse67rpzbj5mrlzg2_WBZ_TFhNzKI3ENbOIUBui8oWx1crFlz7HUVHTudfQwVc6SFZNpAd5jHOu9yW-XhZPt_Q8c8ROj7ttgYmK8mEtKS-zLXpJJl3qs50stJoTMc8lUVEuwKYPexDYr-zNkuNU7hFeWROk74ANkBmL7v1YkSocdQ5L7IBkXX3U_UaCf2F3sh0C38QDWFM0L6A');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-white truncate">Admin User</p>
+<p class="text-xs text-slate-400 truncate">admin@flowable.io</p>
+</div>
+<span class="material-symbols-outlined text-slate-500 text-[18px]">more_vert</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-background-dark">
+<header class="bg-surface-dark border-b border-border-dark px-8 py-5 flex items-center justify-between shrink-0 shadow-sm z-10">
+<div>
+<div class="flex items-center gap-3">
+<h2 class="text-2xl font-bold text-white tracking-tight">Completed Instances</h2>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-dark-lighter border border-border-dark text-xs font-medium text-slate-400">128 Total</span>
+</div>
+<p class="text-slate-400 text-sm mt-1">Archive of all finalized maker-checker workflows and audits</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-border-dark bg-surface-dark-lighter text-white text-sm font-medium hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[20px]">download</span>
+                    Export CSV
+                </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                    New Report
+                </button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden relative">
+<section class="flex-1 flex flex-col min-w-0 bg-background-dark">
+<div class="px-8 py-4 flex flex-col gap-4 border-b border-border-dark bg-surface-dark/50 z-10 backdrop-blur-sm">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="relative flex-1 min-w-[300px] max-w-lg">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2.5 border border-border-dark rounded-lg leading-5 bg-surface-dark text-slate-300 placeholder-slate-500 focus:outline-none focus:bg-surface-dark-lighter focus:border-primary focus:ring-1 focus:ring-primary sm:text-sm transition-all" placeholder="Search by Process ID, Initiator, or Variable value..." type="text"/>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-dark border border-border-dark text-xs font-medium text-slate-300 hover:bg-white/5 hover:border-slate-600 transition-colors whitespace-nowrap">
+                                Definition: All
+                                <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-dark border border-border-dark text-xs font-medium text-slate-300 hover:bg-white/5 hover:border-slate-600 transition-colors whitespace-nowrap">
+                                Date: Last 30 Days
+                                <span class="material-symbols-outlined text-[16px]">calendar_month</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-dark border border-border-dark text-xs font-medium text-slate-300 hover:bg-white/5 hover:border-slate-600 transition-colors whitespace-nowrap">
+                                Status: Completed
+                                <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<div class="w-px h-6 bg-border-dark mx-1"></div>
+<button class="text-primary hover:text-primary/80 transition-colors text-xs font-medium whitespace-nowrap px-2">
+                                Clear Filters
+                            </button>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar p-8 pt-6">
+<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden shadow-sm">
+<table class="min-w-full divide-y divide-border-dark">
+<thead class="bg-surface-dark-lighter">
+<tr>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" scope="col">Process ID</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" scope="col">Definition</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" scope="col">End Date</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" scope="col">Initiator</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" scope="col">Status</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" scope="col">Outcome</th>
+</tr>
+</thead>
+<tbody class="bg-surface-dark divide-y divide-border-dark">
+<tr class="bg-primary/5 cursor-pointer group hover:bg-white/5 transition-colors border-l-2 border-l-primary">
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">PROC-1024</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-white">Loan Approval</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-mono">Oct 25, 2023</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-6 w-6 rounded-full bg-slate-600 flex items-center justify-center text-xs text-white bg-cover ring-1 ring-slate-500" data-alt="Initiator avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDd-EGsGtxIp10BCI-Jn0aBAkMDew5R5AXpGBvbeWvkt6BFz0KAxxicv5MMMYqGONRwOyxKMRd_PmTwUDT66AjCX5lYDHZDZqbQstqTa84j9oHK_HoNeKBbCIxFlZUu_iCd_KF0hldPSVarm7qDjXUvgXm1kdq9WPZ7AFmk445dLbErBYfCANowbplOCLABP8mojKZ8dn0bbiQA64WTDBy7nrW1XUuv3JlFaxqTib6bJemaUYPGsiOI8roCNfHKoaiwwINX_XERDZo');"></div>
+<span class="ml-2 text-sm text-slate-300">Alice Freeman</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                            Completed
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                                        Approved
+                                    </td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors border-l-2 border-l-transparent">
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-300 group-hover:text-primary">PROC-1023</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-white">Expense Report</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-mono">Oct 23, 2023</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-6 w-6 rounded-full bg-slate-600 flex items-center justify-center text-xs text-white bg-cover ring-1 ring-slate-500" data-alt="Initiator avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAKgEnQbg76f71FRPkKPRFRITU7Bg7MkXoaEFv4Kc6UZUgdJMYC-HWMVprJgG483_qwuJuCwm2TYXsKLTxm7f54-YMvan4LRuEXT9_gJDLa6wT7k-gcZl_dfU8NoOsaTNVAqzUahDqpGL3tmAlqMgM9dFZ5AqwVGXiIrIxMMDer4ulR9y-aId-hyhZ-C5NYOYliM2vcVIXXJnjOU93RKjI14-kEyZpmzrYRqjHxq48UTSxj0_buiCkPvHSAaMQIKmum1Ike5zbdGAc');"></div>
+<span class="ml-2 text-sm text-slate-300">Bob Smith</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                            Terminated
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                                        Rejected
+                                    </td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors border-l-2 border-l-transparent">
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-300 group-hover:text-primary">PROC-1022</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-white">Onboarding</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-mono">Oct 24, 2023</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-6 w-6 rounded-full bg-slate-600 flex items-center justify-center text-xs text-white bg-cover ring-1 ring-slate-500" data-alt="Initiator avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCBAS5N2H3ZVNLaj_NOZsbVcrv62nzZUOeE2VFC3Z0SC19uj2q68qXSLdM8J5IZ_tlqz3v4WV7iwwVeTlGz8exAhZ2G_Oas4BR1wKDfALOh-rBhWSCx5urSwdMUvzs3RN52OxYH6O6TCrxpimqg8pcHSjTbAyJCe42N3HMDOu2M7-6GWU2qnxlYJIQiU-UiVgf3-VQMvmL-6fRPJEt0ytOibJM4xHhQBrc8PJczuqfktZ5HKgTcfl7fBXyve36tAVbY0U35IVsbRLU');"></div>
+<span class="ml-2 text-sm text-slate-300">Charlie Day</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                            Completed
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                                        Hired
+                                    </td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors border-l-2 border-l-transparent">
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-300 group-hover:text-primary">PROC-1021</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-white">IT Access Request</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-mono">Oct 22, 2023</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-6 w-6 rounded-full bg-pink-600 flex items-center justify-center text-xs text-white ring-1 ring-pink-500">D</div>
+<span class="ml-2 text-sm text-slate-300">Dave Johnson</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                                            Deleted
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                                        -
+                                    </td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors border-l-2 border-l-transparent">
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-300 group-hover:text-primary">PROC-1020</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-white">Loan Approval</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400 font-mono">Oct 20, 2023</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-6 w-6 rounded-full bg-purple-600 flex items-center justify-center text-xs text-white ring-1 ring-purple-500">E</div>
+<span class="ml-2 text-sm text-slate-300">Emily Stone</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                            Completed
+                                        </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                                        Approved
+                                    </td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="flex items-center justify-between px-2 py-4">
+<div class="text-sm text-slate-400">
+                            Showing <span class="font-medium text-white">1</span> to <span class="font-medium text-white">5</span> of <span class="font-medium text-white">128</span> results
+                        </div>
+<div class="flex gap-2">
+<button class="px-3 py-1 rounded-md bg-surface-dark border border-border-dark text-sm text-slate-400 cursor-not-allowed opacity-50">Previous</button>
+<button class="px-3 py-1 rounded-md bg-surface-dark border border-border-dark text-sm text-white hover:bg-white/5 hover:border-slate-500 transition-colors">Next</button>
+</div>
+</div>
+</div>
+</section>
+<aside class="w-[480px] bg-surface-dark border-l border-border-dark flex flex-col shadow-2xl relative z-30 transform transition-transform duration-300 ease-in-out">
+<div class="px-6 py-5 border-b border-border-dark flex items-start justify-between bg-surface-dark shrink-0">
+<div>
+<div class="flex items-center gap-3">
+<h3 class="text-xl font-bold text-white">PROC-1024</h3>
+<span class="px-2 py-0.5 rounded text-xs font-semibold bg-primary/20 text-primary border border-primary/20">Loan Approval</span>
+</div>
+<p class="text-xs text-slate-400 mt-1">Version 2.0 • Started 2 days ago</p>
+</div>
+<button class="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-white/10">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="border-b border-border-dark bg-surface-dark shrink-0">
+<nav aria-label="Tabs" class="flex -mb-px px-4 overflow-x-auto custom-scrollbar">
+<button class="px-4 py-3 border-b-2 border-primary text-primary text-sm font-medium whitespace-nowrap flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">info</span>
+                            Overview
+                        </button>
+<button class="px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-white hover:border-slate-300 text-sm font-medium whitespace-nowrap flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">task</span>
+                            Tasks
+                        </button>
+<button class="px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-white hover:border-slate-300 text-sm font-medium whitespace-nowrap flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">account_tree</span>
+                            Diagram
+                        </button>
+<button class="px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-white hover:border-slate-300 text-sm font-medium whitespace-nowrap flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">data_object</span>
+                            Variables
+                        </button>
+<button class="px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-white hover:border-slate-300 text-sm font-medium whitespace-nowrap flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">list_alt</span>
+                            Events
+                        </button>
+</nav>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar bg-background-dark/30 p-6 space-y-6">
+<div class="bg-surface-dark rounded-xl border border-border-dark p-5">
+<h4 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                             Key Details
+                        </h4>
+<div class="grid grid-cols-2 gap-y-4 gap-x-2">
+<div>
+<p class="text-xs text-slate-500 uppercase tracking-wide">Initiator</p>
+<div class="flex items-center gap-2 mt-1">
+<div class="h-5 w-5 rounded-full bg-slate-600 bg-cover ring-1 ring-slate-500" data-alt="User avatar small" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBa_L7ZdKeBMrqEuXuFc5EXiVYqe1VBODZ2eTC6IQjXNmx2Fo81UU2inrvsFJ5YZGL0G-Aox0aHEWYVOtiID_pnnSVbsFd8y0ziZ-SpoMOflexv2TsvMgkhcvsUBR_6alFJiH077SloxUdEUvEgR80j8yfveZAF_g0bVMxhIhw4dFixuPLh5TIY3cCEdo0pzKue52FCxTJnpiNb_eOpueDX9bBqILmX430h64mMWi1XPUdK85VsgS3QmBP4RxhQjSjOYg6aYptDGe8');"></div>
+<p class="text-sm font-medium text-slate-200">Alice Freeman</p>
+</div>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase tracking-wide">Outcome</p>
+<p class="text-sm font-medium text-emerald-400 mt-1">Approved</p>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase tracking-wide">Start Date</p>
+<p class="text-sm text-slate-300 mt-1 font-mono">Oct 24, 09:30 AM</p>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase tracking-wide">End Date</p>
+<p class="text-sm text-slate-300 mt-1 font-mono">Oct 25, 02:15 PM</p>
+</div>
+<div class="col-span-2">
+<p class="text-xs text-slate-500 uppercase tracking-wide">Duration</p>
+<p class="text-sm text-slate-300 mt-1">1 day, 4 hours, 45 minutes</p>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden">
+<div class="px-4 py-3 border-b border-border-dark bg-surface-dark-lighter/50 flex justify-between items-center">
+<h4 class="text-sm font-semibold text-white">Tasks</h4>
+<span class="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20">2 Completed</span>
+</div>
+<div class="divide-y divide-border-dark">
+<div class="p-4 flex items-start gap-3 hover:bg-white/5 transition-colors">
+<div class="mt-0.5 h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-white">Review Application</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-xs text-slate-400">Assigned to:</span>
+<div class="flex items-center gap-1">
+<div class="h-4 w-4 rounded-full bg-slate-600 bg-cover ring-1 ring-slate-500" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBa_L7ZdKeBMrqEuXuFc5EXiVYqe1VBODZ2eTC6IQjXNmx2Fo81UU2inrvsFJ5YZGL0G-Aox0aHEWYVOtiID_pnnSVbsFd8y0ziZ-SpoMOflexv2TsvMgkhcvsUBR_6alFJiH077SloxUdEUvEgR80j8yfveZAF_g0bVMxhIhw4dFixuPLh5TIY3cCEdo0pzKue52FCxTJnpiNb_eOpueDX9bBqILmX430h64mMWi1XPUdK85VsgS3QmBP4RxhQjSjOYg6aYptDGe8');"></div>
+<span class="text-xs text-slate-300">Alice Freeman</span>
+</div>
+</div>
+<p class="text-xs text-slate-500 mt-1">Completed Oct 24, 11:00 AM</p>
+</div>
+</div>
+<div class="p-4 flex items-start gap-3 hover:bg-white/5 transition-colors">
+<div class="mt-0.5 h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-white">Approve Loan</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-xs text-slate-400">Assigned to:</span>
+<div class="flex items-center gap-1">
+<div class="h-4 w-4 rounded-full bg-purple-600 flex items-center justify-center text-[10px] text-white ring-1 ring-purple-500">M</div>
+<span class="text-xs text-slate-300">Manager</span>
+</div>
+</div>
+<p class="text-xs text-slate-500 mt-1">Completed Oct 25, 01:00 PM</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden">
+<div class="px-4 py-3 border-b border-border-dark flex justify-between items-center bg-surface-dark-lighter/50">
+<h4 class="text-sm font-semibold text-white">Process Path</h4>
+<button class="text-primary text-xs font-medium hover:underline">Full Screen</button>
+</div>
+<div class="h-48 w-full bg-[#0B1120] relative flex items-center justify-center p-4">
+<div class="flex items-center w-full justify-between opacity-80">
+<div class="flex flex-col items-center gap-2">
+<div class="h-8 w-8 rounded-full border-2 border-emerald-500 bg-emerald-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-emerald-500 text-sm">play_arrow</span>
+</div>
+<span class="text-[10px] text-slate-400">Start</span>
+</div>
+<div class="h-0.5 flex-1 bg-emerald-500 mx-1"></div>
+<div class="flex flex-col items-center gap-2">
+<div class="h-10 w-24 rounded border border-emerald-500 bg-surface-dark flex items-center justify-center shadow-lg shadow-emerald-500/10">
+<span class="text-[10px] text-emerald-400 font-medium">Review App</span>
+</div>
+<span class="text-[10px] text-emerald-500 flex items-center gap-0.5"><span class="material-symbols-outlined text-[10px]">check</span> Done</span>
+</div>
+<div class="h-0.5 flex-1 bg-emerald-500 mx-1"></div>
+<div class="flex flex-col items-center gap-2">
+<div class="h-10 w-24 rounded border border-emerald-500 bg-surface-dark flex items-center justify-center shadow-lg shadow-emerald-500/10">
+<span class="text-[10px] text-emerald-400 font-medium">Approve</span>
+</div>
+<span class="text-[10px] text-emerald-500 flex items-center gap-0.5"><span class="material-symbols-outlined text-[10px]">check</span> Done</span>
+</div>
+<div class="h-0.5 flex-1 bg-emerald-500 mx-1"></div>
+<div class="flex flex-col items-center gap-2">
+<div class="h-8 w-8 rounded-full border-4 border-emerald-500/50 bg-transparent flex items-center justify-center"></div>
+<span class="text-[10px] text-slate-400">End</span>
+</div>
+</div>
+<div class="sr-only" data-alt="BPMN Process Diagram visualization showing the happy path taken from start to approval"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden">
+<div class="px-4 py-3 border-b border-border-dark bg-surface-dark-lighter/50">
+<h4 class="text-sm font-semibold text-white">Top Variables</h4>
+</div>
+<div class="p-0">
+<table class="w-full text-sm text-left">
+<thead class="bg-surface-dark-lighter text-xs text-slate-400 uppercase">
+<tr>
+<th class="px-4 py-2 font-medium">Name</th>
+<th class="px-4 py-2 font-medium">Value</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr>
+<td class="px-4 py-2 text-slate-300 font-mono text-xs">loanAmount</td>
+<td class="px-4 py-2 text-white font-medium">$50,000</td>
+</tr>
+<tr>
+<td class="px-4 py-2 text-slate-300 font-mono text-xs">riskScore</td>
+<td class="px-4 py-2 text-white font-medium">Low</td>
+</tr>
+<tr>
+<td class="px-4 py-2 text-slate-300 font-mono text-xs">applicantType</td>
+<td class="px-4 py-2 text-white font-medium">Premium</td>
+</tr>
+</tbody>
+</table>
+<button class="w-full py-2 text-center text-xs text-primary hover:bg-white/5 transition-colors border-t border-border-dark font-medium">
+                                View all 14 variables
+                            </button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden">
+<div class="px-4 py-3 border-b border-border-dark bg-surface-dark-lighter/50">
+<h4 class="text-sm font-semibold text-white">Recent Events</h4>
+</div>
+<div class="p-4">
+<ul class="relative border-l border-border-dark ml-2 space-y-6">
+<li class="ml-4">
+<div class="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-surface-dark bg-emerald-500"></div>
+<p class="text-sm text-slate-200">Process Completed</p>
+<p class="text-xs text-slate-500 mt-0.5">Oct 25, 02:15 PM</p>
+</li>
+<li class="ml-4">
+<div class="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-surface-dark bg-primary"></div>
+<p class="text-sm text-slate-200">Task "Approve Loan" completed by Manager</p>
+<p class="text-xs text-slate-500 mt-0.5">Oct 25, 01:00 PM</p>
+</li>
+<li class="ml-4">
+<div class="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-surface-dark bg-slate-500"></div>
+<p class="text-sm text-slate-200">Process Started</p>
+<p class="text-xs text-slate-500 mt-0.5">Oct 24, 09:30 AM</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-dark bg-surface-dark shrink-0 flex gap-3">
+<button class="flex-1 py-2 px-4 bg-white/5 hover:bg-white/10 text-white text-sm font-medium rounded-lg border border-border-dark transition-colors">
+                        Re-open Instance
+                    </button>
+<button class="flex-1 py-2 px-4 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg shadow-lg shadow-primary/25 transition-colors">
+                        Download Audit
+                    </button>
+</div>
+</aside>
+</div>
+</main>
+
+</body></html>
