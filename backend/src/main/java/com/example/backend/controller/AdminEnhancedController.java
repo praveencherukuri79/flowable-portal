@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.*;
+import com.example.backend.tenant.TenantContextHolder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -66,6 +67,7 @@ public class AdminEnhancedController {
         
         // Get historic process instance (works for both running and completed)
         HistoricProcessInstance historicInstance = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .singleResult();
         
@@ -105,6 +107,7 @@ public class AdminEnhancedController {
         
         // Tasks (both active and historic)
         List<HistoricTaskInstance> historicTasks = historyService.createHistoricTaskInstanceQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .orderByHistoricTaskInstanceEndTime().desc()
                 .list();
@@ -152,6 +155,7 @@ public class AdminEnhancedController {
         // Current activity (for running instances)
         if (historicInstance.getEndTime() == null) {
             List<Task> activeTasks = taskService.createTaskQuery()
+                    .taskTenantId(TenantContextHolder.getRequiredTenantId())
                     .processInstanceId(processInstanceId)
                     .list();
             
@@ -188,7 +192,10 @@ public class AdminEnhancedController {
         
         log.info("Force completing task: {} by user: {}", taskId, principal.getName());
         
-        Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+        Task task = taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
+                .taskId(taskId)
+                .singleResult();
         if (task == null) {
             return ResponseEntity.notFound().build();
         }
@@ -278,28 +285,34 @@ public class AdminEnhancedController {
         
         // Running instances count
         long runningCount = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .unfinished()
                 .count();
         stats.put("runningInstances", runningCount);
         
         // Completed instances count
         long completedCount = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .finished()
                 .count();
         stats.put("completedInstances", completedCount);
         
         // Suspended instances count
         long suspendedCount = runtimeService.createProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .suspended()
                 .count();
         stats.put("suspendedInstances", suspendedCount);
         
         // Active tasks count
-        long activeTasks = taskService.createTaskQuery().count();
+        long activeTasks = taskService.createTaskQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
+            .count();
         stats.put("activeTasks", activeTasks);
         
         // Overdue tasks count
         long overdueTasks = taskService.createTaskQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskDueBefore(new Date())
                 .count();
         stats.put("overdueTasks", overdueTasks);
@@ -312,6 +325,7 @@ public class AdminEnhancedController {
         today.set(Calendar.MILLISECOND, 0);
         
         long completedToday = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .finished()
                 .finishedAfter(today.getTime())
                 .count();
@@ -332,6 +346,7 @@ public class AdminEnhancedController {
             endOfDay.add(Calendar.DAY_OF_MONTH, 1);
             
             long count = historyService.createHistoricProcessInstanceQuery()
+                    .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                     .startedAfter(startOfDay.getTime())
                     .startedBefore(endOfDay.getTime())
                     .count();

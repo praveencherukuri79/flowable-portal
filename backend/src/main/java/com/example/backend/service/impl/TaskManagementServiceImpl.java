@@ -148,18 +148,21 @@ public class TaskManagementServiceImpl implements TaskManagementService {
     @Override
     public Map<String, Object> getTaskVariables(String taskId) {
         log.info("Getting variables for task: {}", taskId);
+        FlowableQueryUtils.getTaskOrThrow(taskService, taskId);
         return taskService.getVariables(taskId);
     }
 
     @Override
     public void setTaskVariable(String taskId, String variableName, Object value) {
         log.info("Setting variable {} on task {}", variableName, taskId);
+        FlowableQueryUtils.getTaskOrThrow(taskService, taskId);
         taskService.setVariable(taskId, variableName, value);
     }
 
     @Override
     public void deleteTask(String taskId, String reason) {
         log.info("Deleting task {} with reason: {}", taskId, reason);
+        FlowableQueryUtils.getTaskOrThrow(taskService, taskId);
         taskService.deleteTask(taskId, reason);
     }
 }

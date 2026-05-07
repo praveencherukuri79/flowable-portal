@@ -2,11 +2,13 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.ProcessStartResponse;
 import com.example.backend.service.ProcessManagementService;
+import com.example.backend.tenant.TenantContextHolder;
 import com.example.backend.util.ProcessVariableUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.common.engine.api.FlowableObjectNotFoundException;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -50,20 +52,26 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
         // Extract business key (use process instance ID if not provided)
         String businessKey = ProcessVariableUtils.extractBusinessKey(enrichedVariables);
         log.info("Business Key: {}", businessKey);
+        String tenantId = TenantContextHolder.getRequiredTenantId();
+        log.info("Tenant ID: {}", tenantId);
         
         log.info("Final Variables to be passed: {}", enrichedVariables);
 
         // Start process
         log.info("Starting process instance...");
-        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
-                processKey,
-                businessKey,
-                enrichedVariables
-        );
+        ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder()
+                .processDefinitionKey(processKey)
+                .businessKey(businessKey)
+                .variables(enrichedVariables)
+                .tenantId(tenantId)
+                .overrideProcessDefinitionTenantId(tenantId)
+                .fallbackToDefaultTenant()
+                .start();
 
         log.info("✓ Process started successfully!");
         log.info("  Process Instance ID: {}", processInstance.getId());
         log.info("  Process Definition ID: {}", processInstance.getProcessDefinitionId());
+        log.info("  Runtime Tenant ID: {}", processInstance.getTenantId());
         log.info("  Business Key: {}", processInstance.getBusinessKey());
         log.info("=== PROCESS START COMPLETE ===");
 
@@ -81,6 +89,7 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
     @CacheEvict(value = "processInstances", allEntries = true)
     public void suspendProcess(String processInstanceId) {
         log.info("Suspending process instance: {}", processInstanceId);
+        getRequiredProcessInstance(processInstanceId);
         runtimeService.suspendProcessInstanceById(processInstanceId);
     }
 
@@ -88,6 +97,7 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
     @CacheEvict(value = "processInstances", allEntries = true)
     public void activateProcess(String processInstanceId) {
         log.info("Activating process instance: {}", processInstanceId);
+        getRequiredProcessInstance(processInstanceId);
         runtimeService.activateProcessInstanceById(processInstanceId);
     }
 
@@ -95,12 +105,14 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
     @CacheEvict(value = "processInstances", allEntries = true)
     public void deleteProcess(String processInstanceId, String reason) {
         log.info("Deleting process instance: {} with reason: {}", processInstanceId, reason);
+        getRequiredProcessInstance(processInstanceId);
         runtimeService.deleteProcessInstance(processInstanceId, reason);
     }
 
     @Override
     @Cacheable(value = "processVariables", key = "#processInstanceId")
     public Map<String, Object> getProcessVariables(String processInstanceId) {
+        getRequiredProcessInstance(processInstanceId);
         return runtimeService.getVariables(processInstanceId);
     }
 
@@ -108,6 +120,7 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
     @CacheEvict(value = "processVariables", key = "#processInstanceId")
     public void setProcessVariable(String processInstanceId, String variableName, Object value) {
         log.info("Setting variable {} on process {}", variableName, processInstanceId);
+        getRequiredProcessInstance(processInstanceId);
         runtimeService.setVariable(processInstanceId, variableName, value);
     }
 
@@ -115,6 +128,7 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
     @CacheEvict(value = "processVariables", key = "#processInstanceId")
     public void setProcessVariables(String processInstanceId, Map<String, Object> variables) {
         log.info("Setting {} variables on process {}", variables.size(), processInstanceId);
+        getRequiredProcessInstance(processInstanceId);
         runtimeService.setVariables(processInstanceId, variables);
     }
 
@@ -122,8 +136,20 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
     @Cacheable(value = "processInstances", key = "#processInstanceId")
     public ProcessInstance getProcessInstance(String processInstanceId) {
         return runtimeService.createProcessInstanceQuery()
+                .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .singleResult();
+    }
+
+    private ProcessInstance getRequiredProcessInstance(String processInstanceId) {
+        ProcessInstance processInstance = getProcessInstance(processInstanceId);
+        if (processInstance == null) {
+            throw new FlowableObjectNotFoundException(
+                    "Process instance not found for tenant: " + processInstanceId,
+                    ProcessInstance.class
+            );
+        }
+        return processInstance;
     }
 }
 

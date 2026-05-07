@@ -4,6 +4,7 @@ import com.example.backend.dto.ProcessInstanceDto;
 import com.example.backend.dto.ProcessStartResponse;
 import com.example.backend.dto.TaskDto;
 import com.example.backend.service.ProcessManagementService;
+import com.example.backend.tenant.TenantContextHolder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
+import org.flowable.common.engine.api.FlowableObjectNotFoundException;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
@@ -76,6 +78,7 @@ public class ProcessControlController {
     @Operation(summary = "Get all running instances", description = "Retrieve all currently running process instances")
     public ResponseEntity<List<ProcessInstanceDto>> getRunningInstances() {
         List<ProcessInstance> instances = runtimeService.createProcessInstanceQuery()
+                .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .active()
                 .orderByProcessInstanceId()
                 .desc()
@@ -92,6 +95,7 @@ public class ProcessControlController {
     @Operation(summary = "Get instance details", description = "Get detailed information about a process instance")
     public ResponseEntity<ProcessInstanceDto> getInstanceDetails(@PathVariable String processInstanceId) {
         ProcessInstance instance = runtimeService.createProcessInstanceQuery()
+                .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .singleResult();
         
@@ -105,6 +109,7 @@ public class ProcessControlController {
     @GetMapping("/instances/{processInstanceId}/variables")
     @Operation(summary = "Get instance variables", description = "Get all variables for a process instance")
     public ResponseEntity<Map<String, Object>> getInstanceVariables(@PathVariable String processInstanceId) {
+        requireProcessInstance(processInstanceId);
         Map<String, Object> variables = runtimeService.getVariables(processInstanceId);
         return ResponseEntity.ok(variables);
     }
@@ -115,6 +120,7 @@ public class ProcessControlController {
             @PathVariable String processInstanceId,
             @RequestBody Map<String, Object> variables
     ) {
+        requireProcessInstance(processInstanceId);
         runtimeService.setVariables(processInstanceId, variables);
         
         Map<String, String> response = new HashMap<>();
@@ -130,6 +136,7 @@ public class ProcessControlController {
             @PathVariable String processInstanceId,
             @RequestParam(required = false) String deleteReason
     ) {
+        requireProcessInstance(processInstanceId);
         runtimeService.deleteProcessInstance(
                 processInstanceId,
                 deleteReason != null ? deleteReason : "Deleted by admin"
@@ -145,6 +152,7 @@ public class ProcessControlController {
     @PostMapping("/instances/{processInstanceId}/suspend")
     @Operation(summary = "Suspend process instance", description = "Suspend a running process instance")
     public ResponseEntity<Map<String, String>> suspendInstance(@PathVariable String processInstanceId) {
+        requireProcessInstance(processInstanceId);
         runtimeService.suspendProcessInstanceById(processInstanceId);
         
         Map<String, String> response = new HashMap<>();
@@ -157,6 +165,7 @@ public class ProcessControlController {
     @PostMapping("/instances/{processInstanceId}/activate")
     @Operation(summary = "Activate process instance", description = "Activate a suspended process instance")
     public ResponseEntity<Map<String, String>> activateInstance(@PathVariable String processInstanceId) {
+        requireProcessInstance(processInstanceId);
         runtimeService.activateProcessInstanceById(processInstanceId);
         
         Map<String, String> response = new HashMap<>();
@@ -169,7 +178,9 @@ public class ProcessControlController {
     @GetMapping("/instances/{processInstanceId}/tasks")
     @Operation(summary = "Get instance tasks", description = "Get all active tasks for a process instance")
     public ResponseEntity<List<TaskDto>> getInstanceTasks(@PathVariable String processInstanceId) {
+        requireProcessInstance(processInstanceId);
         List<Task> tasks = taskService.createTaskQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .list();
         
@@ -194,6 +205,7 @@ public class ProcessControlController {
         dto.status = pi.isSuspended() ? "SUSPENDED" : "ACTIVE";
         dto.startTime = pi.getStartTime() != null ? pi.getStartTime().toString() : null;
         dto.startUserId = pi.getStartUserId();
+        dto.tenantId = pi.getTenantId();
         dto.suspended = pi.isSuspended();
         
         return dto;
@@ -212,9 +224,24 @@ public class ProcessControlController {
         dto.createTime = task.getCreateTime();
         dto.dueDate = task.getDueDate();
         dto.priority = task.getPriority();
+        dto.tenantId = task.getTenantId();
         dto.suspended = task.isSuspended() ? "true" : "false";
         
         return dto;
+    }
+
+    private ProcessInstance requireProcessInstance(String processInstanceId) {
+        ProcessInstance processInstance = runtimeService.createProcessInstanceQuery()
+                .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+                .processInstanceId(processInstanceId)
+                .singleResult();
+        if (processInstance == null) {
+            throw new FlowableObjectNotFoundException(
+                    "Process instance not found for tenant: " + processInstanceId,
+                    ProcessInstance.class
+            );
+        }
+        return processInstance;
     }
 }
 

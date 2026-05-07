@@ -2,6 +2,7 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.MetricsDto;
 import com.example.backend.service.AdminMetricsService;
+import com.example.backend.tenant.TenantContextHolder;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +29,17 @@ public class AdminMetricsServiceImpl implements AdminMetricsService {
         MetricsDto dto = new MetricsDto();
 
         // Calculate running and completed instances
-        long runningInstances = historyService.createHistoricProcessInstanceQuery().unfinished().count();
-        long completedInstances = historyService.createHistoricProcessInstanceQuery().finished().count();
-        long totalTasks = taskService.createTaskQuery().count();
+        long runningInstances = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .unfinished()
+            .count();
+        long completedInstances = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .finished()
+            .count();
+        long totalTasks = taskService.createTaskQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
+            .count();
 
         dto.runningInstances = runningInstances;
         dto.completedInstances = completedInstances;
@@ -42,6 +51,7 @@ public class AdminMetricsServiceImpl implements AdminMetricsService {
             Date start = Date.from(LocalDate.now().minusDays(i).atStartOfDay(ZoneId.systemDefault()).toInstant());
             Date end = Date.from(LocalDate.now().minusDays(i - 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
             long count = historyService.createHistoricProcessInstanceQuery()
+                    .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                     .startedAfter(start).startedBefore(end).count();
             
             MetricsDto.DailyCount dc = new MetricsDto.DailyCount();
@@ -52,11 +62,17 @@ public class AdminMetricsServiceImpl implements AdminMetricsService {
 
         MetricsDto.StateCount claimable = new MetricsDto.StateCount();
         claimable.state = "CLAIMABLE";
-        claimable.count = taskService.createTaskQuery().taskUnassigned().count();
+        claimable.count = taskService.createTaskQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
+            .taskUnassigned()
+            .count();
 
         MetricsDto.StateCount assigned = new MetricsDto.StateCount();
         assigned.state = "ASSIGNED";
-        assigned.count = taskService.createTaskQuery().taskAssigned().count();
+        assigned.count = taskService.createTaskQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
+            .taskAssigned()
+            .count();
 
         dto.instancesByDay = dailyCounts;
         dto.tasksByState = List.of(claimable, assigned);

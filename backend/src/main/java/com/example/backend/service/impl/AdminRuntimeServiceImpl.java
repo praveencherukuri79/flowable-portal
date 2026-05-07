@@ -2,6 +2,7 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.*;
 import com.example.backend.service.AdminRuntimeService;
+import com.example.backend.tenant.TenantContextHolder;
 import org.flowable.engine.*;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.engine.repository.ProcessDefinition;
@@ -42,6 +43,7 @@ public class AdminRuntimeServiceImpl implements AdminRuntimeService {
     @Override
     public PagedResponse<ProcessInstanceDto> searchProcessInstances(String definitionKey, String state, int page, int size) {
         var query = historyService.createHistoricProcessInstanceQuery();
+        query.processInstanceTenantId(TenantContextHolder.getRequiredTenantId());
 
         if (definitionKey != null && !definitionKey.isBlank()) {
             query.processDefinitionKey(definitionKey);
@@ -82,6 +84,7 @@ public class AdminRuntimeServiceImpl implements AdminRuntimeService {
     @Override
     public String generateProcessDiagramSvg(String processInstanceId) {
         ProcessInstance pi = runtimeService.createProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .singleResult();
         if (pi == null) {

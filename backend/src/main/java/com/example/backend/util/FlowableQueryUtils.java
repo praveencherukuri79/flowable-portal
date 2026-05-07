@@ -1,5 +1,6 @@
 package com.example.backend.util;
 
+import com.example.backend.tenant.TenantContextHolder;
 import org.flowable.engine.TaskService;
 import org.flowable.task.api.Task;
 
@@ -16,6 +17,7 @@ public class FlowableQueryUtils {
      */
     public static List<Task> getTasksForUser(TaskService taskService, String username) {
         return taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .or()
                     .taskAssignee(username)
                     .taskCandidateUser(username)
@@ -28,6 +30,7 @@ public class FlowableQueryUtils {
      */
     public static List<Task> getTasksByCandidateGroup(TaskService taskService, String group) {
         return taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskCandidateGroup(group)
                 .list();
     }
@@ -37,6 +40,7 @@ public class FlowableQueryUtils {
      */
     public static List<Task> getTasksByGroupOrAssigned(TaskService taskService, String group, String username) {
         return taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .or()
                     .taskCandidateGroup(group)
                     .taskAssignee(username)
@@ -49,6 +53,7 @@ public class FlowableQueryUtils {
      */
     public static List<Task> getAssignedTasks(TaskService taskService, String username) {
         return taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskAssignee(username)
                 .list();
     }
@@ -58,6 +63,7 @@ public class FlowableQueryUtils {
      */
     public static List<Task> getUnassignedTasksForGroup(TaskService taskService, String group) {
         return taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskCandidateGroup(group)
                 .taskUnassigned()
                 .list();
@@ -68,6 +74,7 @@ public class FlowableQueryUtils {
      */
     public static boolean taskExists(TaskService taskService, String taskId) {
         return taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskId(taskId)
                 .count() > 0;
     }
@@ -77,6 +84,7 @@ public class FlowableQueryUtils {
      */
     public static boolean canUserClaimTask(TaskService taskService, String taskId, String username) {
         return taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskId(taskId)
                 .or()
                     .taskCandidateUser(username)
@@ -90,6 +98,7 @@ public class FlowableQueryUtils {
      */
     public static Task getTaskOrThrow(TaskService taskService, String taskId) {
         Task task = taskService.createTaskQuery()
+                .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskId(taskId)
                 .singleResult();
         

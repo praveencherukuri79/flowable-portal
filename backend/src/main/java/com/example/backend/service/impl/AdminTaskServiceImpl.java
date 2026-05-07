@@ -2,6 +2,7 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.*;
 import com.example.backend.service.AdminTaskService;
+import com.example.backend.tenant.TenantContextHolder;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.TaskService;
 import org.flowable.task.api.Task;
@@ -26,6 +27,7 @@ public class AdminTaskServiceImpl implements AdminTaskService {
     @Override
     public PagedResponse<TaskDto> searchTasks(String candidateGroup, String state, int page, int size) {
         var query = taskService.createTaskQuery();
+        query.taskTenantId(TenantContextHolder.getRequiredTenantId());
 
         if (candidateGroup != null && !candidateGroup.isBlank()) {
             query.taskCandidateGroup(candidateGroup);

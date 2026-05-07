@@ -3,6 +3,7 @@ package com.example.backend.service.impl;
 import com.example.backend.dto.ProcessInstanceDto;
 import com.example.backend.dto.TaskDto;
 import com.example.backend.service.FlowableProcessService;
+import com.example.backend.tenant.TenantContextHolder;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -25,31 +26,49 @@ public class FlowableProcessServiceImpl implements FlowableProcessService {
 
     @Override
     public ProcessInstanceDto startProcess(String processKey) {
-        ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey);
+        ProcessInstance pi = runtimeService.createProcessInstanceBuilder()
+                .processDefinitionKey(processKey)
+                .tenantId(TenantContextHolder.getRequiredTenantId())
+                .overrideProcessDefinitionTenantId(TenantContextHolder.getRequiredTenantId())
+                .fallbackToDefaultTenant()
+                .start();
         return toProcessInstanceDto(pi);
     }
 
     @Override
     public ProcessInstanceDto startProcess(String processKey, Map<String, Object> variables) {
-        ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, variables);
+        ProcessInstance pi = runtimeService.createProcessInstanceBuilder()
+                .processDefinitionKey(processKey)
+                .variables(variables)
+                .tenantId(TenantContextHolder.getRequiredTenantId())
+                .overrideProcessDefinitionTenantId(TenantContextHolder.getRequiredTenantId())
+                .fallbackToDefaultTenant()
+                .start();
         return toProcessInstanceDto(pi);
     }
 
     @Override
     public List<ProcessInstanceDto> getActiveProcessInstances() {
-        return runtimeService.createProcessInstanceQuery().active().list()
+        return runtimeService.createProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .active()
+            .list()
                 .stream().map(this::toProcessInstanceDto).collect(Collectors.toList());
     }
 
     @Override
     public List<ProcessInstanceDto> getProcessInstancesByKey(String processKey) {
-        return runtimeService.createProcessInstanceQuery().processDefinitionKey(processKey).list()
+        return runtimeService.createProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .processDefinitionKey(processKey)
+            .list()
                 .stream().map(this::toProcessInstanceDto).collect(Collectors.toList());
     }
 
     @Override
     public ProcessInstanceDto getProcessInstance(String processInstanceId) {
         ProcessInstance pi = runtimeService.createProcessInstanceQuery()
+                .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId).singleResult();
         return pi != null ? toProcessInstanceDto(pi) : null;
     }
@@ -71,14 +90,23 @@ public class FlowableProcessServiceImpl implements FlowableProcessService {
 
     @Override
     public List<TaskDto> getTasksForUser(String user) {
-        return taskService.createTaskQuery().taskCandidateOrAssigned(user).list()
+        return taskService.createTaskQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
+            .taskCandidateOrAssigned(user)
+            .list()
                 .stream().map(this::toTaskDto).collect(Collectors.toList());
     }
 
     @Override
     public Map<String, String> getProcessStatistics() {
-        long activeCount = runtimeService.createProcessInstanceQuery().active().count();
-        long suspendedCount = runtimeService.createProcessInstanceQuery().suspended().count();
+        long activeCount = runtimeService.createProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .active()
+            .count();
+        long suspendedCount = runtimeService.createProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .suspended()
+            .count();
         return Map.of(
                 "activeProcesses", String.valueOf(activeCount),
                 "suspendedProcesses", String.valueOf(suspendedCount),

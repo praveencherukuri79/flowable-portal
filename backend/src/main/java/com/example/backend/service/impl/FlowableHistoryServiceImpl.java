@@ -3,6 +3,7 @@ package com.example.backend.service.impl;
 import com.example.backend.dto.ProcessInstanceDto;
 import com.example.backend.dto.TaskDto;
 import com.example.backend.service.FlowableHistoryService;
+import com.example.backend.tenant.TenantContextHolder;
 import com.example.backend.util.DtoMapper;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.RuntimeService;
@@ -32,6 +33,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     @Override
     public List<ProcessInstanceDto> getProcessHistory(String processKey) {
         return historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .processDefinitionKey(processKey)
                 .list()
                 .stream()
@@ -42,6 +44,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     @Override
     public List<ProcessInstanceDto> getAllProcessHistory() {
         return historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .list()
                 .stream()
                 .map(DtoMapper::toProcessInstanceDto)
@@ -51,6 +54,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     @Override
     public ProcessInstanceDto getHistoricProcessInstance(String processInstanceId) {
         HistoricProcessInstance hpi = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .singleResult();
         if (hpi == null) return null;
@@ -93,6 +97,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     @Override
     public List<TaskDto> getTaskHistory(String processInstanceId) {
         return historyService.createHistoricTaskInstanceQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .processInstanceId(processInstanceId)
                 .list()
                 .stream()
@@ -103,6 +108,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     @Override
     public List<TaskDto> getTaskHistoryByUser(String user) {
         return historyService.createHistoricTaskInstanceQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .taskAssignee(user)
                 .list()
                 .stream()
@@ -113,6 +119,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
     @Override
     public List<TaskDto> getCompletedTasks() {
         return historyService.createHistoricTaskInstanceQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
                 .finished()
                 .list()
                 .stream()
@@ -122,9 +129,17 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
 
     @Override
     public Map<String, Object> getProcessStatistics() {
-        long totalProcesses = historyService.createHistoricProcessInstanceQuery().count();
-        long finishedProcesses = historyService.createHistoricProcessInstanceQuery().finished().count();
-        long unfinishedProcesses = historyService.createHistoricProcessInstanceQuery().unfinished().count();
+        long totalProcesses = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .count();
+        long finishedProcesses = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .finished()
+            .count();
+        long unfinishedProcesses = historyService.createHistoricProcessInstanceQuery()
+            .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
+            .unfinished()
+            .count();
         
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalProcesses", totalProcesses);
@@ -137,8 +152,13 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
 
     @Override
     public Map<String, Object> getTaskStatistics() {
-        long totalTasks = historyService.createHistoricTaskInstanceQuery().count();
-        long completedTasks = historyService.createHistoricTaskInstanceQuery().finished().count();
+        long totalTasks = historyService.createHistoricTaskInstanceQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
+            .count();
+        long completedTasks = historyService.createHistoricTaskInstanceQuery()
+            .taskTenantId(TenantContextHolder.getRequiredTenantId())
+            .finished()
+            .count();
         long pendingTasks = totalTasks - completedTasks;
         
         Map<String, Object> stats = new HashMap<>();
@@ -158,6 +178,7 @@ public class FlowableHistoryServiceImpl implements FlowableHistoryService {
             Date end = sdf.parse(endDate);
             
             return historyService.createHistoricProcessInstanceQuery()
+                    .processInstanceTenantId(TenantContextHolder.getRequiredTenantId())
                     .startedAfter(start)
                     .startedBefore(end)
                     .list()
