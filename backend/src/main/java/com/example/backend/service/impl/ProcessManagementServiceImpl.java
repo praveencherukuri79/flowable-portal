@@ -3,6 +3,7 @@ package com.example.backend.service.impl;
 import com.example.backend.dto.ProcessStartResponse;
 import com.example.backend.service.ProcessManagementService;
 import com.example.backend.tenant.TenantContextHolder;
+import com.example.backend.util.FlowableProcessStartRules;
 import com.example.backend.util.ProcessVariableUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,23 @@ public class ProcessManagementServiceImpl implements ProcessManagementService {
         log.info("Business Key: {}", businessKey);
         String tenantId = TenantContextHolder.getRequiredTenantId();
         log.info("Tenant ID: {}", tenantId);
+
+        boolean allowMultipleInstances = FlowableProcessStartRules.allowsMultipleInstances(processKey);
+        log.info("allowMultipleInstances: {}", allowMultipleInstances);
+
+        if (!allowMultipleInstances) {
+            long activeInstanceCount = runtimeService.createProcessInstanceQuery()
+                .processInstanceTenantId(tenantId)
+                .processDefinitionKey(processKey)
+                .active()
+                .count();
+
+            if (activeInstanceCount > 0) {
+                throw new IllegalStateException(
+                        "Process definition does not allow multiple active instances: " + processKey
+                );
+            }
+        }
         
         log.info("Final Variables to be passed: {}", enrichedVariables);
 

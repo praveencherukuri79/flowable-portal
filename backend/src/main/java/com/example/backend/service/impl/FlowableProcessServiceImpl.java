@@ -4,6 +4,7 @@ import com.example.backend.dto.ProcessInstanceDto;
 import com.example.backend.dto.TaskDto;
 import com.example.backend.service.FlowableProcessService;
 import com.example.backend.tenant.TenantContextHolder;
+import com.example.backend.util.FlowableProcessStartRules;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -26,6 +27,7 @@ public class FlowableProcessServiceImpl implements FlowableProcessService {
 
     @Override
     public ProcessInstanceDto startProcess(String processKey) {
+        validateMultipleInstanceRule(processKey);
         ProcessInstance pi = runtimeService.createProcessInstanceBuilder()
                 .processDefinitionKey(processKey)
                 .tenantId(TenantContextHolder.getRequiredTenantId())
@@ -37,6 +39,7 @@ public class FlowableProcessServiceImpl implements FlowableProcessService {
 
     @Override
     public ProcessInstanceDto startProcess(String processKey, Map<String, Object> variables) {
+        validateMultipleInstanceRule(processKey);
         ProcessInstance pi = runtimeService.createProcessInstanceBuilder()
                 .processDefinitionKey(processKey)
                 .variables(variables)
@@ -146,5 +149,26 @@ public class FlowableProcessServiceImpl implements FlowableProcessService {
         dto.formKey = t.getFormKey();
         dto.tenantId = t.getTenantId();
         return dto;
+    }
+
+    private void validateMultipleInstanceRule(String processKey) {
+        String tenantId = TenantContextHolder.getRequiredTenantId();
+        boolean allowMultipleInstances = FlowableProcessStartRules.allowsMultipleInstances(processKey);
+
+        if (allowMultipleInstances) {
+            return;
+        }
+
+        long activeInstanceCount = runtimeService.createProcessInstanceQuery()
+                .processInstanceTenantId(tenantId)
+                .processDefinitionKey(processKey)
+                .active()
+                .count();
+
+        if (activeInstanceCount > 0) {
+            throw new IllegalStateException(
+                    "Process definition does not allow multiple active instances: " + processKey
+            );
+        }
     }
 }
